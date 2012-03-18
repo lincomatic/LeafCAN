@@ -44,7 +44,7 @@ EV_DATA g_EvData;
 
 st_cmd_t g_CanMsg;
 uint8_t g_CanData[8];
-LiquidCrystal lcd(21,20,19,18,17,16);
+LiquidCrystal lcd(21,20,16,17,18,19);
 
 uint8_t g_LogEnabled = 1;
 uint8_t g_LcdEnabled = 1;
