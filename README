@@ -19,3 +19,5 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 CANMonitor.sch - Eagle schematic for CAN bus monitor
 PartList.txt - BOM for CAN bus monitor
 LeafCAN.pde - AT90CAN128 Arduino sketch for Nissan Leaf SOC monitor
+
+For more information on this project, see my blog: http://blog.lincomatic.com/?tag=can-bus
