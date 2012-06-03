@@ -16,8 +16,20 @@ You should have received a copy of the GNU General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+-----------
+
 CANMonitor.sch - Eagle schematic for CAN bus monitor
 PartList.txt - BOM for CAN bus monitor
 LeafCAN.pde - AT90CAN128 Arduino sketch for Nissan Leaf SOC monitor
+LeafCAN.hex - precompiled HEX file
+
+-----------
 
 For more information on this project, see my blog: http://blog.lincomatic.com/?tag=can-bus
+
+ChangeLog
+20120602 SCL v1.1
+- added remaining KWh to display
+- update display only once every 250ms to increase readability
+
+v1.0 - initial release

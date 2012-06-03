@@ -25,10 +25,12 @@
 #include <LiquidCrystal.h>
 #include <can_lib.h>
 
+#define VER_STR "v1.1"
+
 #define SERIAL_BAUD 115200
 #define MAX_SOC 281.0F
-
-#define PACKAMPAVGLEN 25
+#define KW_FACTOR 80.0F // 80 is from phil, tonywilliams prefers 75
+#define LCD_UPDATE_MS 250 // update interval for LCD in ms
 
 typedef struct ev_data {
   uint16_t m_Soc;
@@ -44,12 +46,11 @@ EV_DATA g_EvData;
 
 st_cmd_t g_CanMsg;
 uint8_t g_CanData[8];
-LiquidCrystal lcd(21,20,16,17,18,19);
+LiquidCrystal lcd(21,20,16,17,18,19); // PC5/PC4/PC0/PC1/PC2/PC3
+//LiquidCrystal lcd(37,38,11,12,13,14); // PE5/PE6/PB3/PB4/PB5/PB6
 
-uint8_t g_LogEnabled = 1;
+uint8_t g_LogEnabled = 0;
 uint8_t g_LcdEnabled = 1;
-
-int16_t g_PackAmps[PACKAMPAVGLEN];
 
 void CANinit()
 {
@@ -81,9 +82,11 @@ void setup()
 
   lcd.begin(16,2);
   lcd.setCursor(0,0);
-  lcd.print("LeafCAN");
+  lcd.print("  LeafCAN ");
+  lcd.print(VER_STR);
   lcd.setCursor(0,1);
   lcd.print("Waiting for CAN");
+
   CANinit();
   lcd.setCursor(0,1);
   lcd.print("Serial init    ");
@@ -103,10 +106,11 @@ uint8_t ReadCAN()
   return (canstat == CAN_STATUS_ERROR) ? 1 : 0;
 }
 
+unsigned long lastpack,lastsoc;
 void loop()                     
 {
   int16_t i16;
-  char sf1[10],sf2[10];
+  char sf1[10],sf2[10],sf3[10];
   char line[17];
   int8_t i;
 
@@ -123,7 +127,9 @@ void loop()
       Serial.write(msg,sizeof(msg));
     }
     if (g_LcdEnabled) {
+      unsigned long ms = millis();
       if (g_CanMsg.id.std == 0x1db) {
+        if ((ms-lastpack) > LCD_UPDATE_MS) {
 	g_EvData.m_PackVolts = (g_CanData[2] << 2) | (g_CanData[3] >> 6);
 	g_EvData.m_PackVolts /= 2.0F;
 
@@ -133,31 +139,44 @@ void loop()
 	  i16 |= 0xf800;
 	}
 
-        int16_t sum = 0;
-	for (i=PACKAMPAVGLEN-2;i >= 0;i--) {
-	  g_PackAmps[i+1] = g_PackAmps[i];
-          sum += g_PackAmps[i];
-	}
-	g_PackAmps[0] = i16;
-
-	g_EvData.m_PackAmps = -(sum / (2.0F * PACKAMPAVGLEN));
-//	g_EvData.m_PackAmps = -(i16 / (2.0F));
+	g_EvData.m_PackAmps = -(i16 / (2.0F));
 	dtostrf(g_EvData.m_PackVolts,5,1,sf1);
 	dtostrf(g_EvData.m_PackAmps,6,1,sf2);
-	sprintf(line,"B %sV %sA",sf1,sf2);
+//	float kw = (g_EvData.m_PackAmps * g_EvData.m_PackVolts)/1000.0F;
+//	dtostrf(kw,3,0,sf3);
+//	sprintf(line,"%sV %sA%s",sf1,sf2,sf3);
+        sprintf(line,"B %sV %sA",sf1,sf2);
 	lcd.setCursor(0,1);
 	lcd.print(line);
+	lastpack = ms;
+        }
       }
       else if (g_CanMsg.id.std == 0x5b9) {
 	g_EvData.m_FuelBars = g_CanData[0] >> 3;
       }
-      else if (g_CanMsg.id.std == 0x5bc) {
+      else if (g_CanMsg.id.std == 0x5bc)  {
+        if ((ms-lastsoc) > LCD_UPDATE_MS) {
 	g_EvData.m_Soc = (g_CanData[0] << 2) | (g_CanData[1] >> 6);
 	g_EvData.m_SocPct = (g_EvData.m_Soc / MAX_SOC) * 100.0F;
-	dtostrf(g_EvData.m_SocPct,5,1,sf1);
-	sprintf(line,"SOC%s%% %3d %2d",sf1,g_EvData.m_Soc,g_EvData.m_FuelBars);
+	dtostrf(g_EvData.m_SocPct,4,g_EvData.m_SocPct < 100.0F ? 1 : 0,sf1);
+	//	sprintf(line,"SOC%s%% %3d %2d",sf1,g_EvData.m_Soc,g_EvData.m_FuelBars);
+	float kwh = (((float)g_EvData.m_Soc) * KW_FACTOR) / 1000.0F;
+        char *skwh = sf2;
+        if (kwh >= 10.0F) {
+          dtostrf(kwh,4,1,sf2);
+        }
+        else if (kwh >= 1.0F) {
+          dtostrf(kwh,4,2,sf2);
+        }
+        else {
+          dtostrf(kwh,4,3,sf2);
+          skwh = sf2 + 1;
+        }
+	sprintf(line,"%s %3d %s %2d",skwh,g_EvData.m_Soc,sf1,g_EvData.m_FuelBars);
 	lcd.setCursor(0,0);
 	lcd.print(line);
+	lastsoc = ms;
+        }
       }
       /*not yet
       else if (g_CanMsg.id.std == 0x1da) {
