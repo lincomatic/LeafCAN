@@ -27,7 +27,14 @@ LeafCAN.hex - precompiled HEX file
 
 For more information on this project, see my blog: http://blog.lincomatic.com/?tag=can-bus
 
+Many thanks to the members of the MyNissanLeaf forum, especially garygid, for all the groundwork which led to this project.
+----------
+
 ChangeLog
+20120602 SCL v1.2
+- added power consumption in KW to line 2 of display (battery pack volts * amps)
+- added SHOW_KWH/SHOW_KW #defines, allowing users to revert to display style of v1.0 if desired
+
 20120602 SCL v1.1
 - added remaining KWh to display
 - update display only once every 250ms to increase readability

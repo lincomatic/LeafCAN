@@ -25,12 +25,14 @@
 #include <LiquidCrystal.h>
 #include <can_lib.h>
 
-#define VER_STR "v1.1"
+#define VER_STR "v1.2"
 
 #define SERIAL_BAUD 115200
 #define MAX_SOC 281.0F
 #define KW_FACTOR 80.0F // 80 is from phil, tonywilliams prefers 75
 #define LCD_UPDATE_MS 250 // update interval for LCD in ms
+#define SHOW_KWH // show remaining pack KWh in line 1
+#define SHOW_KW // show KW usage on line 2
 
 typedef struct ev_data {
   uint16_t m_Soc;
@@ -141,11 +143,29 @@ void loop()
 
 	g_EvData.m_PackAmps = -(i16 / (2.0F));
 	dtostrf(g_EvData.m_PackVolts,5,1,sf1);
+#ifdef SHOW_KW
+	dtostrf(g_EvData.m_PackAmps,5,1,sf2);
+	float kw = (g_EvData.m_PackAmps * g_EvData.m_PackVolts)/1000.0F;
+        char *skw = sf3;
+
+	if (kw >= 10.0F) {
+	  dtostrf(kw,4,1,sf3);
+	}
+        else if (kw <= -10.0F) {
+          dtostrf(kw,4,0,sf3);
+        }
+        else if (kw < 0.0F) {
+          dtostrf(kw,4,1,sf3);
+        }
+	else {
+	  dtostrf(kw,4,2,sf3);
+	}
+
+	sprintf(line,"%s %s %s",sf1,sf2,skw);
+#else
 	dtostrf(g_EvData.m_PackAmps,6,1,sf2);
-//	float kw = (g_EvData.m_PackAmps * g_EvData.m_PackVolts)/1000.0F;
-//	dtostrf(kw,3,0,sf3);
-//	sprintf(line,"%sV %sA%s",sf1,sf2,sf3);
         sprintf(line,"B %sV %sA",sf1,sf2);
+#endif // SHOW_KW
 	lcd.setCursor(0,1);
 	lcd.print(line);
 	lastpack = ms;
@@ -158,8 +178,9 @@ void loop()
         if ((ms-lastsoc) > LCD_UPDATE_MS) {
 	g_EvData.m_Soc = (g_CanData[0] << 2) | (g_CanData[1] >> 6);
 	g_EvData.m_SocPct = (g_EvData.m_Soc / MAX_SOC) * 100.0F;
+#ifdef SHOW_KWH
 	dtostrf(g_EvData.m_SocPct,4,g_EvData.m_SocPct < 100.0F ? 1 : 0,sf1);
-	//	sprintf(line,"SOC%s%% %3d %2d",sf1,g_EvData.m_Soc,g_EvData.m_FuelBars);
+
 	float kwh = (((float)g_EvData.m_Soc) * KW_FACTOR) / 1000.0F;
         char *skwh = sf2;
         if (kwh >= 10.0F) {
@@ -173,6 +194,11 @@ void loop()
           skwh = sf2 + 1;
         }
 	sprintf(line,"%s %3d %s %2d",skwh,g_EvData.m_Soc,sf1,g_EvData.m_FuelBars);
+#else
+	dtostrf(g_EvData.m_SocPct,5,1,sf1);
+	sprintf(line,"SOC%s%% %3d %2d",sf1,g_EvData.m_Soc,g_EvData.m_FuelBars);
+#endif // SHOW_KWH
+
 	lcd.setCursor(0,0);
 	lcd.print(line);
 	lastsoc = ms;
