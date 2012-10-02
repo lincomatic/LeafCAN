@@ -1,6 +1,6 @@
 LeafCAN - SOC Meter for Nissan Leaf
-by Sam C. Lin <lincomatic@hotmail.com>
-Copyright (c) 2012 Sam C. Lin
+by Sam C. Lin <lincomatic@hotmail.com> and Chris Howell <chris1howell83@gmail.com>
+Copyright (c) 2012 Sam C. Lin and Chris Howell
 
 The files in this project free software; you can redistribute
 and/or modify them under the terms of the GNU General Public
@@ -19,9 +19,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 -----------
 
 CANMonitor.sch - Eagle schematic for CAN bus monitor
-PartList.txt - BOM for CAN bus monitor
 LeafCAN.pde - AT90CAN128 Arduino sketch for Nissan Leaf SOC monitor
 LeafCAN.hex - precompiled HEX file
+flash.bat - MS batch file for setting fuses and flashing firmware
 
 -----------
 
