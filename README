@@ -31,6 +31,10 @@ Many thanks to the members of the MyNissanLeaf forum, especially garygid, for al
 ----------
 
 ChangeLog
+20121002 SCL v1.3
+- added V2 hardware support
+- added FIXED_FUEL_BARS option
+
 20120602 SCL v1.2
 - added power consumption in KW to line 2 of display (battery pack volts * amps)
 - added SHOW_KWH/SHOW_KW #defines, allowing users to revert to display style of v1.0 if desired
