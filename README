@@ -34,6 +34,8 @@ ChangeLog
 20121002 SCL v1.3
 - added V2 hardware support
 - added FIXED_FUEL_BARS option
+- added SOCPCT_55B to show "true" SOC% from 55B message
+  (when enabled, replaces amps in center of bottom line)
 
 20120602 SCL v1.2
 - added power consumption in KW to line 2 of display (battery pack volts * amps)

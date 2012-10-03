@@ -36,6 +36,7 @@
 #define MAX_SOC 281.0F
 #define KW_FACTOR 74.73F // 80 is from ingineer, surfingslovak prefers 74.73
 #define LCD_UPDATE_MS 250 // update interval for LCD in ms
+#define SOCPCT_55B
 #define SHOW_KWH // show remaining pack KWh in line 1
 #define SHOW_KW // show KW usage on line 2
 // the Leaf's fuel bar display isn't tied to SOC, which I find very confusing,
@@ -55,6 +56,9 @@
 typedef struct ev_data {
   uint16_t m_Soc;
   float m_SocPct;
+#ifdef SOCPCT_55B
+  char m_SocPct_55b[5]; // soc pct from msg 55b
+#endif
   float m_PackVolts;
   float m_PackAmps; // A
 #ifdef FIXED_FUEL_BARS
@@ -226,23 +230,28 @@ void loop()
 
 	g_EvData.m_PackAmps = -(i16 / (2.0F));
 	dtostrf(g_EvData.m_PackVolts,5,1,sf1);
-#ifdef SHOW_KW
-	dtostrf(g_EvData.m_PackAmps,5,1,sf2);
-	float kw = (g_EvData.m_PackAmps * g_EvData.m_PackVolts)/1000.0F;
         char *skw = sf3;
+	float kw = (g_EvData.m_PackAmps * g_EvData.m_PackVolts)/1000.0F;
+#ifdef SHOW_KW
+#ifdef SOCPCT_55B
+	strcpy(sf2,g_EvData.m_SocPct_55b);
+	dtostrf(kw,5,((kw < 10.0) && (kw > -10.0)) ? 2 : 1,skw);
+#else
+	dtostrf(g_EvData.m_PackAmps,5,1,sf2);
 
 	if (kw >= 10.0F) {
-	  dtostrf(kw,4,1,sf3);
+	  dtostrf(kw,4,1,skw);
 	}
         else if (kw <= -10.0F) {
-          dtostrf(kw,4,0,sf3);
+          dtostrf(kw,4,0,skw);
         }
         else if (kw < 0.0F) {
-          dtostrf(kw,4,1,sf3);
+          dtostrf(kw,4,1,skw);
         }
 	else {
-	  dtostrf(kw,4,2,sf3);
+	  dtostrf(kw,4,2,skw);
 	}
+#endif
 
 	sprintf(line,"%s %s %s",sf1,sf2,skw);
 #else
@@ -254,6 +263,19 @@ void loop()
 	lastpack = ms;
         }
       }
+#ifdef SOCPCT_55B
+      else if (g_CanMsg.id.std == 0x55b) {
+	// http://www.mynissanleaf.com/viewtopic.php?f=44&t=4131&p=229040#p229040
+	// ticktock says
+	//I am fairly certain that 55b is the actual SOC in D1&D2:
+	//55b:D1[7:0]<<2+D2[7:6]>>6 = SOC % X 10.
+	//I get exactly 80.0 on an 80% charge and 95.1-95.6 on a 100% charge. This suggests that this is actually what is used to dtermine the stop point on an 80% charge. I was wondering if anyone who hasn't seen the southwest loss impact could take a look. I'm curious if it shows > 95% for a new battery or if 95% is the target. Since 80% scales with the battery capacity degradation I would expect the 95% too as well but maybe less precisely since they use pack volts to stop instead of SOC.
+	uint16_t socpctx10 = (g_CanData[0] << 2) | (g_CanData[1] >> 6);
+	uint8_t socpct = socpctx10 / 10;
+	uint8_t socpctfrac = socpctx10 % 10;
+	sprintf(g_EvData.m_SocPct_55b,"%d.%d",socpct,socpctfrac);
+      }
+#endif //SOCPCT_55B
 #ifndef FIXED_FUEL_BARS
       else if (g_CanMsg.id.std == 0x5b9) {
 	g_EvData.m_FuelBars = g_CanData[0] >> 3;
