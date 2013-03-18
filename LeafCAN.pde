@@ -26,8 +26,15 @@
 #include <can_lib.h>
 
 #define V2 // v2 hardware
+// support Adafruit 16x2 OLED display http://www.adafruit.com/products/823
+// requires Adafruit's library: https://github.com/ladyada/Adafruit_CharacterOLED
+//#define ADA_OLED
 
+#ifdef ADA_OLED
+#define VER_STR "v1.3o"
+#else
 #define VER_STR "v1.3"
+#endif
 
 #define BACKLIGHT_PIN 15 // PB7
 #define CONTRAST_PIN 36 // PE4
@@ -39,6 +46,12 @@
 #define SOCPCT_55B
 #define SHOW_KWH // show remaining pack KWh in line 1
 #define SHOW_KW // show KW usage on line 2
+
+
+
+
+
+
 // the Leaf's fuel bar display isn't tied to SOC, which I find very confusing,
 // because this means that as the battery ages or temperature changes, the bars
 // correspond to less
@@ -75,7 +88,15 @@ EV_DATA g_EvData;
 st_cmd_t g_CanMsg;
 uint8_t g_CanData[8];
 #ifdef V2
+#ifdef ADA_OLED
+#include <Adafruit_CharacterOLED.h>
+// rs/rw/enable/d4/d5/d6/d7
+Adafruit_CharacterOLED lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
+#else
+// rs/enable/d4/d5/d6/d7
 LiquidCrystal lcd(37,38,11,12,13,14); // PE5/PE6/PB3/PB4/PB5/PB6
+
+#endif
 #else // V1
 LiquidCrystal lcd(21,20,16,17,18,19); // PC5/PC4/PC0/PC1/PC2/PC3
 #endif // V2
