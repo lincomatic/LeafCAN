@@ -31,6 +31,9 @@ Many thanks to the members of the MyNissanLeaf forum, especially garygid, for al
 ----------
 
 ChangeLog
+20130321 SCL v1.3
+- added Adafruit 16x2 OLED support - #define ADA_OLED
+
 20121002 SCL v1.3
 - added V2 hardware support
 - added FIXED_FUEL_BARS option
