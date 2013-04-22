@@ -46,6 +46,18 @@ public:
   // calculated values
   int32_t m_W; // Watts (negative = charging)
   int32_t m_Wh; // energy remaining in pack = gids * KW_FACTOR
+
+  // calculated constants
+  int32_t m_WhL; // Wh left @ LB
+  int32_t m_WhV; // Wh left @ VLB
+  int32_t m_WhT; // Wh left @ Turtle
+
+  // settings
+  int32_t m_DpKWh10_Low; // lowest dist/KWh * 10 for DTE
+  int32_t m_DpKWh10_Incr; // DpKWh10 increment for DTE
+  char m_CurDteType; // 'L'=lb,'V'=vlb,'T'=turtle
+  char m_CurDteUnits; // 'M' = mi, 'K' = km
+
   
   LeafCanData();
   uint16_t SetDirtyBits(uint16_t bits) {

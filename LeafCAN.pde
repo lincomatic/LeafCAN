@@ -65,8 +65,34 @@ int8_t lastbtnstate = ENC_BIT_BTN; // 0=pressed
 int8_t lastcount = 0;
 
 
+// print 2-digit number 100 = A0, 113 = B3, etc
+char *SPrintDist(int dist,char *buf)
+{
+  int i=dist/10;
+  if (i == 0) {
+    buf[0] = ' ';
+  }
+  else if (i > 9) {
+    buf[0] = 'A' + (i-10);
+  }
+  else {
+    buf[0] = i + '0';
+  }
+  buf[1] = (dist % 10) + '0';
+  buf[2] = 0;
+  return buf;
+}
+
+// distPerKwhx10 = dist/KWh * 10
+// returns distance to whMin
+int DistRem(int32_t whRem,int32_t whMin,int distPerKwhx10)
+{
+  return (int)((((whRem-whMin)*((int32_t)distPerKwhx10))+5000L)/10000);
+}
 
 
+// KWh gids fixedbars
+// volts soc kw
 uint8_t Screen0()
 {
   uint8_t rc = 1;
@@ -148,6 +174,47 @@ uint8_t Screen0()
 
   return rc;
 }
+
+// DTE screen
+// DTEtype dist/kwh dist/kwh dist/kwh dist/kwh dist/kwh
+// units   dist     dist     dist     dist     dist
+//
+// DTEtype: = 'L' = low batt, 'V' = very low batt, 'T' = turtle
+// units: 'M' = mi, 'K' = km
+uint8_t Screen1()
+{
+  if (g_LeafCanData.DirtyBitsSet(DBF_WH_REMAINING)) {
+    g_LeafCanData.ClearDirtyBits(DBF_WH_REMAINING);
+
+    int32_t whmin;
+    if (g_LeafCanData.m_CurDteType == 'L') whmin = g_LeafCanData.m_WhL;
+    else if (g_LeafCanData.m_CurDteType == 'V') whmin = g_LeafCanData.m_WhV;
+    else whmin = g_LeafCanData.m_WhT; 
+    int32_t wh = g_LeafCanData.m_Wh;
+    int32_t dpkw100 = g_LeafCanData.m_DpKWh10_Low;
+    int32_t dpkw101 = dpkw100 + g_LeafCanData.m_DpKWh10_Incr;
+    int32_t dpkw102 = dpkw101 + g_LeafCanData.m_DpKWh10_Incr;
+    int32_t dpkw103 = dpkw102 + g_LeafCanData.m_DpKWh10_Incr;
+    int32_t dpkw104 = dpkw103 + g_LeafCanData.m_DpKWh10_Incr;
+
+    char distrem0[3],distrem1[3],distrem2[3],distrem3[3],distrem4[3];
+    SPrintDist(DistRem(wh,whmin,dpkw100),distrem0);
+    SPrintDist(DistRem(wh,whmin,dpkw101),distrem1);
+    SPrintDist(DistRem(wh,whmin,dpkw102),distrem2);
+    SPrintDist(DistRem(wh,whmin,dpkw103),distrem3);
+    SPrintDist(DistRem(wh,whmin,dpkw104),distrem4);
+
+    char line[17];
+    sprintf(line,"%c %02d %02d %02d %02d %02d\n",g_LeafCanData.m_CurDteType,dpkw100,dpkw101,dpkw102,dpkw103,dpkw104);
+    g_Lcd.setCursor(0,0);
+    g_Lcd.print(line);
+
+    sprintf(line,"%c %s %s %s %s %s\n",g_LeafCanData.m_CurDteUnits,distrem0,distrem1,distrem2,distrem3,distrem4);
+    g_Lcd.setCursor(0,1);
+    g_Lcd.print(line);
+  }
+}
+
 
 #ifdef BACKLIGHT_PIN
 //0=off 255=max bright
@@ -247,7 +314,8 @@ void loop()
 
     uint8_t prc = g_LeafCanData.ProcessRxMsg(g_CanBus.GetMsgRx());
     if (!prc && ((millis()-g_LastScreenUpdateMs) > LCD_UPDATE_MS)) { // processed a message
-      uint8_t src = Screen0();
+      //uint8_t src = Screen0();
+      uint8_t src = Screen1();
       if (!src) {
 	g_LastScreenUpdateMs = millis();
       }

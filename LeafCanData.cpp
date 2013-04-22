@@ -33,6 +33,17 @@ LeafCanData::LeafCanData()
   m_SOC = 0;
   m_GOMFuelBars = 0;
   m_Gids = 0;
+
+  // calculated constants
+  m_WhL = ((((int32_t)GIDS_LB) * KW_FACTOR)+50L) / 100L;
+  m_WhV = ((((int32_t)GIDS_VLB) * KW_FACTOR)+50L) / 100L;
+  m_WhT = ((((int32_t)GIDS_TURTLE) * KW_FACTOR)+50L) / 100L;
+
+  // startup settings
+  m_DpKWh10_Low = DEF_DPKWH10_LOW; // lowest miles/KWh * 10;
+  m_DpKWh10_Incr = DEF_DPKWH10_INCR; // MpKWh10 increment 
+  m_CurDteType = 'V';
+  m_CurDteUnits = 'M';
 }
 
 // return = 0 = processed a CAN msg
@@ -62,33 +73,41 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
     }
     
     if (calcKW) {
-      SetDirtyBits(DBF_WATTS);
-
       int32_t v10 = (((int32_t)rpv)/2L)*10L + ((rpv & 1) ? 5L : 0L); // volts * 10
       int32_t a10 = (((int32_t)rpa)/2L)*10L + ((rpa & 1) ? 5L : 0L); // amps * 10
-      m_W = ((v10 * -a10) + ((a10 >= 0) ? -50L:50L))/100L;
+      int32_t w = ((v10 * -a10) + ((a10 >= 0) ? -50L:50L))/100L;
+      if (w != m_W) {
+	SetDirtyBits(DBF_WATTS);
+	m_W = w;
+      }
+
     }
     rc = 0;
   }
   else if (rxmsg->id.std == 0x55b) {
-    SetDirtyBits(DBF_SOC);
-    
     uint16_t soc10 = (candata[0] << 2) | (candata[1] >> 6);
     if (soc10 != m_SOC) {
+      SetDirtyBits(DBF_SOC);
       m_SOC = soc10;
     }
     rc = 0;
   }
   else if (rxmsg->id.std == 0x5b9) {
-    SetDirtyBits(DBF_GOM_FUEL_BARS);
-    m_GOMFuelBars = candata[0] >> 3;
+    uint8_t gfb = candata[0] >> 3;
+    if (gfb != m_GOMFuelBars) {
+      SetDirtyBits(DBF_GOM_FUEL_BARS);
+      m_GOMFuelBars = gfb;
+    }
     rc = 0;
   }
   else if (rxmsg->id.std == 0x5bc)  {
-    SetDirtyBits(DBF_GIDS|DBF_WH_REMAINING|DBF_FIXED_FUEL_BARS);
-    m_Gids = (candata[0] << 2) | (candata[1] >> 6);
-    m_Wh = ((((int32_t)m_Gids) * KW_FACTOR)+50L) / 100L;
-    m_FixedFuelBars = (uint8_t)(((((int32_t)m_Gids) - 24L)*130L)/257);
+    uint16_t gids = (candata[0] << 2) | (candata[1] >> 6);
+    if (gids != m_Gids) {
+      SetDirtyBits(DBF_GIDS|DBF_WH_REMAINING|DBF_FIXED_FUEL_BARS);
+      m_Gids = gids;
+      m_Wh = ((((int32_t)m_Gids) * KW_FACTOR)+50L) / 100L;
+      m_FixedFuelBars = (uint8_t)(((((int32_t)m_Gids) - 24L)*130L)/257);
+    }
     rc = 0;
   }
       /*not yet

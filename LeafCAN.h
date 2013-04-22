@@ -47,8 +47,6 @@
 
 #define BACKLIGHT_TIMEOUT 5000 // turn off backlight after CAN bus idle for (ms)
 #define SERIAL_BAUD 115200
-#define MAX_SOC 281.0F
-#define KW_FACTOR 7473L // 80 is from ingineer, surfingslovak prefers 74.73
 #define LCD_UPDATE_MS 250 // update interval for LCD in ms
 #define SOCPCT_55B // show "true" SOC% from 55B message
 #define SHOW_KWH // show remaining pack KWh in line 1
@@ -80,6 +78,17 @@
 #define ENC_DDR DDRC
 #define ENC_PIN PINC
 #define ENC_PORT PORTC
+
+//
+// constants
+//
+#define KW_FACTOR 7473L // 80 is from ingineer, surfingslovak prefers 74.73
+#define GIDS_LB  49 // low batt
+#define GIDS_VLB 24 // very low batt
+#define GIDS_TURTLE 6 // really varies from 4-6 ... 
+#define DEF_DPKWH10_LOW 30 // default lowest dist/kwh*10 for DTE
+#define DEF_DPKWH10_INCR 5 // default dist/kwh*10 increment for DTE
+
 
 
 //
