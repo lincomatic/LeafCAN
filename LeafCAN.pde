@@ -34,19 +34,19 @@
 LeafCanData g_LeafCanData;
 CanBusInterface g_CanBus;
 
-#ifdef V2
-//#ifdef ADA_OLED
-//#include <Adafruit_CharacterOLED.h>
+#ifdef ADA_OLED
 // rs/rw/enable/d4/d5/d6/d7
-//Adafruit_CharacterOLED lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
-//#else
+//#include <Adafruit_CharacterOLED.h>
+Adafruit_CharacterOLED lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
+#else
 #include <LiquidCrystal.h>
+#ifdef V2
 LiquidCrystal g_Lcd(37,38,11,12,13,14); // PE5/PE6/PB3/PB4/PB5/PB6
-//#endif // ADA_OLED
-#else // V1
+#else 
 LiquidCrystal g_Lcd(21,20,16,17,18,19); // PC5/PC4/PC0/PC1/PC2/PC3
-#endif // V2
+#endif
 //LiquidCrystal g_Lcd(37,38,11,12,13,14); // PE5/PE6/PB3/PB4/PB5/PB6
+#endif // ADA_OLED
 
 uint8_t g_LogEnabled = 0;
 uint8_t g_LogOnly = 0;

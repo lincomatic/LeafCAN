@@ -33,6 +33,9 @@
 
 // support Adafruit 16x2 OLED display http://www.adafruit.com/products/823
 // requires Adafruit's library: https://github.com/ladyada/Adafruit_CharacterOLED
+// due to a bug in Arduino, you must uncomment
+//  //#include <Adafruit_CharacterOLED.h>
+// in LeafCAN.pde if ADA_OLED is defined
 //#define ADA_OLED
 
 #define V2 // v2 hardware
@@ -82,6 +85,13 @@
 //
 // includes
 //
+
+#if ARDUINO >= 100 
+   #include "Arduino.h"
+#else
+   #include "WProgram.h"
+#endif
+
 #include "RotaryEncoder.h"
 #include "CanBusInterface.h"
 #include "LeafCanData.h"
@@ -89,15 +99,8 @@
 //
 // globals
 //
-//#ifdef ADA_OLED
-//#include <Adafruit_CharacterOLED.h>
-//extern Adafruit_CharacterOLED lcd;
-//#else
-#include <LiquidCrystal.h>
 extern LeafCanData g_LeafCanData;
-//#endif // ADA_OLED
 extern CanBusInterface g_CanBus;
-extern LiquidCrystal g_Lcd;
 
 #ifdef BACKLIGHT_PIN
 extern uint8_t g_Brightness;

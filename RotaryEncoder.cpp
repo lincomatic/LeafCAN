@@ -22,6 +22,12 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#if ARDUINO >= 100 
+   #include "Arduino.h"
+#else
+   #include "WProgram.h"
+#endif
+
 #include "RotaryEncoder.h"
 
 int8_t RotaryEncoder::enc_states[16] = {

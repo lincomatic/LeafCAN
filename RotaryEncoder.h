@@ -24,11 +24,6 @@
  */
 #ifndef _ROTARY_ENCODER_H_
 #define _ROTARY_ENCODER_H_
-#if defined(ARDUINO) && (ARDUINO >= 100)
-#include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 /*
  Rotary encoder with polling reads.
