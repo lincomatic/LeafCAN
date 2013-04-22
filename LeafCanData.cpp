@@ -64,9 +64,10 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
     
     if (calcKW) {
       SetDirtyBits(DBF_WATTS);
-      int32_t v10 = rpv*10 + ((rpv & 1) ? 5 : 0); // volts * 10
-      int32_t a10 = rpa*10 + ((rpa & 1) ? 5 : 0); // amps * 10
-      m_W = ((v10 * -a10) + 50L)/100L;
+
+      int32_t v10 = (((int32_t)rpv)/2L)*10L + ((rpv & 1) ? 5L : 0L); // volts * 10
+      int32_t a10 = (((int32_t)rpa)/2L)*10L + ((rpa & 1) ? 5L : 0L); // amps * 10
+      m_W = ((v10 * -a10) + ((a10 >= 0) ? -50L:50L))/100L;
     }
     rc = 0;
   }
@@ -107,5 +108,68 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
 
   return rc;
 }
+
+#ifdef notyet
+
+void sendReq() {
+  uint8_t *candata = rxmsg->pt_data;
+  txmsg->dlc = 8;
+
+  candata[0] = 0x02;
+  candata[1] = 0x21;
+  candata[2] = 0x01;
+  candata[3] = 0xff;
+  candata[4] = 0xff;
+  candata[5] = 0xff;
+  candata[6] = 0xff;
+  candata[7] = 0xff;
+
+    static char data[8] = {0x02, 0x21, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff};
+    if(reqMsgCnt<99){
+        switch (reqMsgCnt){
+            case 0:
+                can1.monitor(false); // set to active mode
+                can1SleepMode = 0; // enable TX
+                data[0]=0x02; //change to request group 1
+                data[1]=0x21;
+                data[2]=0x01;
+                break;
+            case 6: // group 1 has 6 frames
+                can1.monitor(false); // set to active mode
+                can1SleepMode = 0; // enable TX
+                data[0]=0x02; //change to request group 2 (cp data)
+                data[1]=0x21;
+                data[2]=0x02;
+                break;
+            case 35: // group 2 has 29 frames
+                data[0]=0x02; //change to request group 3
+                data[1]=0x21;
+                data[2]=0x03;
+                break;
+            case 40: // group 3 has 5 frames
+                data[0]=0x02; //change to request group 4 (temperature)
+                data[1]=0x21;
+                data[2]=0x04;
+                break;
+            case 43: // group 4 has 3 frames
+                data[0]=0x02; //change to request group 5
+                data[1]=0x21;
+                data[2]=0x05;
+                break;
+            case 54: // group 5 has 11 frames
+                reqMsgCnt = 99;
+                can1SleepMode = 1; // disable TX
+                can1.monitor(true); // set to snoop mode
+                msgReq.detach(); // stop ticker
+            default:
+                data[0]=0x30; //change to request next line message
+                data[1]=0x01;
+                data[2]=0x00;
+        }
+        can1.write(CANMessage(0x79b, data, 8));
+        reqMsgCnt++;
+    }
+}
+#endif
 
 

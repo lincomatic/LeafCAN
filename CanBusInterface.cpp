@@ -27,11 +27,12 @@
 CanBusInterface::CanBusInterface()
 {
   m_LastCanMsgRxMs = 0;
+  m_LastCanMsgTxMs = 0;
 
   m_CanMsgRx.cmd = CMD_RX;
   m_CanMsgRx.pt_data = m_CanDataRx;
-  m_CanMsgRx.cmd = CMD_TX;
-  m_CanMsgRx.pt_data = m_CanDataTx;
+  m_CanMsgTx.cmd = CMD_TX_DATA;
+  m_CanMsgTx.pt_data = m_CanDataTx;
 }
 
 void CanBusInterface::Init()
@@ -83,6 +84,25 @@ uint8_t CanBusInterface::Read()
   }
   else {
     m_LastCanMsgRxMs = millis();
+    return 0;
+  }
+}
+
+
+uint8_t CanBusInterface::Write()
+{
+  uint8_t canstat;
+
+  while(CAN.cmd(&m_CanMsgTx) != CAN_CMD_ACCEPTED);
+
+  // --- Wait for Tx completed
+  while((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED);
+
+  if (canstat == CAN_STATUS_ERROR) {
+    return 1;
+  }
+  else {
+    m_LastCanMsgTxMs = millis();
     return 0;
   }
 }

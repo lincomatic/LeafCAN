@@ -29,6 +29,7 @@
 class CanBusInterface {
 public:
   unsigned long m_LastCanMsgRxMs;
+  unsigned long m_LastCanMsgTxMs;
 
   st_cmd_t m_CanMsgRx;
   st_cmd_t m_CanMsgTx;
@@ -38,6 +39,7 @@ public:
   CanBusInterface();
   void Init();
   uint8_t Read();
+  uint8_t Write();
   st_cmd_t *GetMsgRx() { return &m_CanMsgRx; }
 };
 

@@ -80,23 +80,23 @@ uint8_t Screen0()
     g_LeafCanData.ClearDirtyBits(DBF_WH_REMAINING |DBF_GIDS|DBF_FIXED_FUEL_BARS);
 
     int32_t wh = g_LeafCanData.m_Wh;
-    if (wh >= 10.0F) {
+    if (wh >= 10000) {
       // nn.n
       wh += 50;
-      sprintf(sf1,"%d.%d",(int)(wh/1000),(int)((wh%1000)/100));
+      sprintf(sf1,"%2d.%d",(int)(wh/1000),(int)((wh%1000)/100));
     }
-    else if (wh >= 1.0F) {
+    else if (wh >= 1000) {
       // n.nn
       wh += 5;
-      sprintf(sf1,"%d.%d",(int)(wh/1000),(int)((wh%1000)/10));
+      sprintf(sf1,"%d.%02d",(int)(wh/1000),(int)((wh%1000)/10));
     }
     else {
       // .nnn
-      sprintf(sf1,".%d",(int)(wh % 1000));
+      sprintf(sf1,".%03d",(int)(wh % 1000));
     }
 
     // nn.n
-    sprintf(sf2,"%d.%d",g_LeafCanData.m_FixedFuelBars/10,g_LeafCanData.m_FixedFuelBars%10);
+    sprintf(sf2,"%2d.%d",g_LeafCanData.m_FixedFuelBars/10,g_LeafCanData.m_FixedFuelBars%10);
     sprintf(line,"%s  %3d   %s",sf1,g_LeafCanData.m_Gids,sf2);
 
     g_Lcd.setCursor(0,0);
@@ -108,30 +108,38 @@ uint8_t Screen0()
     g_LeafCanData.ClearDirtyBits(DBF_PACK_VOLTS|DBF_SOC|DBF_WATTS);
 
     // nnn.n
-    sprintf(sf1,"%d.%c",g_LeafCanData.m_PackVolts/2,(g_LeafCanData.m_PackVolts & 1) ? '5' : '0');
-    // nn.n
-    sprintf(sf2,"%d.%d",g_LeafCanData.m_SOC/10,g_LeafCanData.m_SOC%10);
+    sprintf(sf1,"%3d.%c",g_LeafCanData.m_PackVolts/2,(g_LeafCanData.m_PackVolts & 1) ? '5' : '0');
+    // nnn.n
+    sprintf(sf2,"%3d.%d",g_LeafCanData.m_SOC/10,g_LeafCanData.m_SOC%10);
 
     int32_t w = g_LeafCanData.m_W;
-    if (w >= 10000.0F) {
+    if (w >= 10000) {
       // nn.n
       w += 50;
-      sprintf(sf3,"%d.%d",(int)(w/1000),(int)((w%1000)/100));
+      sprintf(sf3,"%2d.%d",(int)(w/1000),(int)((w%1000)/100));
     }
-    else if (w <= -10000.0F) {
-      // -nn
-      sprintf(sf3,"%d",(int)(w/1000));
+    else if (w <= -10000) {
+      w -= 500;
+      // b-nn
+      sprintf(sf3,"%4d",(int)(w/1000));
     }
-    else if (w < 0.0F) {
+    else if (w < 0) {
       // -n.n
-      w += 50;
-      sprintf(sf3,"%d.%d",(int)(w/1000),-(int)((w%1000)/100));
+      w -= 50;
+      int wd1000 = w/1000;
+      if (wd1000 == 0) {
+	sprintf(sf3,"-0.%d",-(int)((w%1000)/100));
+      }
+      else {
+	sprintf(sf3,"%2d.%d",wd1000,-(int)((w%1000)/100));
+      }
     }
     else {
       // n.nn
       w += 5;
-      sprintf(sf3,"%d.%d",(int)(w/1000),(int)((w%1000)/10));
+      sprintf(sf3,"%d.%02d",(int)(w/1000),(int)((w%1000)/10));
     }
+
 
     sprintf(line,"%s %s %s",sf1,sf2,sf3);
     g_Lcd.setCursor(0,1);
@@ -220,6 +228,10 @@ void loop()
   ServiceEncoder();
 
   if (!g_CanBus.Read()) {
+    if (!g_Brightness) {
+      setBackLight(255);
+    }
+
     if (g_LogEnabled) {
       st_cmd_t *rxmsg = g_CanBus.GetMsgRx();
       uint8_t msg[11];
