@@ -26,6 +26,7 @@
 
 LeafCanData::LeafCanData()
 {
+  /*
   m_DirtyBits = 0;
   m_PackVolts = 0;
   m_PackAmps = 0;
@@ -33,6 +34,16 @@ LeafCanData::LeafCanData()
   m_SOC = 0;
   m_GOMFuelBars = 0;
   m_Gids = 0;
+  m_BatTemp1 = 0;
+  m_BatTemp2 = 0;
+  m_BatTemp3 = 0;
+  m_BatTemp4 = 0;
+  m_CPVmin = 0;
+  m_CPVmax = 0;
+  m_CPVavg = 0;
+  m_SOC32 = 0;
+  m_PackCap = 0;
+  */
 
   // calculated constants
   m_WhL = ((((int32_t)GIDS_LB) * KW_FACTOR)+50L) / 100L;
@@ -40,10 +51,9 @@ LeafCanData::LeafCanData()
   m_WhT = ((((int32_t)GIDS_TURTLE) * KW_FACTOR)+50L) / 100L;
 
   // startup settings
-  m_DpKWh10_Low = DEF_DPKWH10_LOW; // lowest miles/KWh * 10;
-  m_DpKWh10_Incr = DEF_DPKWH10_INCR; // MpKWh10 increment 
-  m_CurDteType = 'V';
-  m_CurDteUnits = 'M';
+  m_DpKWh10_Low = DEF_DPKWH10_LOW; // lowest dist/KWh * 10;
+  m_DpKWh10_Incr = DEF_DPKWH10_INCR; // DpKWh10 increment 
+  m_CurDteType = 'L';
 }
 
 // return = 0 = processed a CAN msg

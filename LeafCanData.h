@@ -25,6 +25,7 @@
 #ifndef _LEAFCANDATA_H_
 #define _LEAFCANDATA_H_
 
+// dirty bits
 #define DBF_PACK_VOLTS 0x0001
 #define DBF_PACK_AMPS  0x0002
 #define DBF_WATTS      0x0004
@@ -33,15 +34,23 @@
 #define DBF_GOM_FUEL_BARS   0x0020
 #define DBF_FIXED_FUEL_BARS 0x0040
 #define DBF_WH_REMAINING    0x0080
+#define DBF_BATT_TEMP  0x0100
+#define DBF_SOC_CAP    0x0200
+#define DBF_CP_VOLTS   0x0400
+
 class LeafCanData {
   uint16_t m_DirtyBits;
 public:
   uint16_t m_PackVolts; // Pack Volts * 2
   int16_t m_PackAmps;  // Pack Amps * 2 (positive = charging)
-  uint16_t m_SOC;   // = SOC% * 10
+  uint16_t m_SOC;   // = SOC (% * 10)
   uint16_t m_Gids;
   uint8_t  m_GOMFuelBars;  // fuel bars displayed in dash GOM
   uint8_t  m_FixedFuelBars; // fixed fuel bars * 10
+  uint8_t m_BatTemp1,m_BatTemp2,m_BatTemp3,m_BatTemp4; // battery temperature (C)
+  uint16_t m_CPVmin,m_CPVmax,m_CPVavg; // cell pair min/max/avg voltage (mV)
+  int32_t m_SOC32; // high precision SOC (% * 10000)
+  int32_t m_PackCap; // pack capacity (Ah * 10000)
 
   // calculated values
   int32_t m_W; // Watts (negative = charging)
@@ -56,7 +65,6 @@ public:
   int32_t m_DpKWh10_Low; // lowest dist/KWh * 10 for DTE
   int32_t m_DpKWh10_Incr; // DpKWh10 increment for DTE
   char m_CurDteType; // 'L'=lb,'V'=vlb,'T'=turtle
-  char m_CurDteUnits; // 'M' = mi, 'K' = km
 
   
   LeafCanData();

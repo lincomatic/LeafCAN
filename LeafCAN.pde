@@ -57,6 +57,7 @@ uint8_t g_Brightness = 0;
 #endif // BACKLIGHT_PIN
 
 unsigned long g_LastScreenUpdateMs;
+uint8_t g_CurScreenIdx;
 
 #include "RotaryEncoder.h"
 RotaryEncoder g_RotEnc;
@@ -93,7 +94,7 @@ int DistRem(int32_t whRem,int32_t whMin,int distPerKwhx10)
 
 // KWh gids fixedbars
 // volts soc kw
-uint8_t Screen0()
+uint8_t InfoScreen()
 {
   uint8_t rc = 1;
   char sf1[10],sf2[10],sf3[10];
@@ -176,12 +177,11 @@ uint8_t Screen0()
 }
 
 // DTE screen
-// DTEtype dist/kwh dist/kwh dist/kwh dist/kwh dist/kwh
-// units   dist     dist     dist     dist     dist
+// dist/kwh dist/kwh dist/kwh dist/kwh dist/kwh DTEtype
+// dist     dist     dist     dist     dist
 //
 // DTEtype: = 'L' = low batt, 'V' = very low batt, 'T' = turtle
-// units: 'M' = mi, 'K' = km
-uint8_t Screen1()
+uint8_t DTEScreen()
 {
   if (g_LeafCanData.DirtyBitsSet(DBF_WH_REMAINING)) {
     g_LeafCanData.ClearDirtyBits(DBF_WH_REMAINING);
@@ -205,14 +205,99 @@ uint8_t Screen1()
     SPrintDist(DistRem(wh,whmin,dpkw104),distrem4);
 
     char line[17];
-    sprintf(line,"%c %02d %02d %02d %02d %02d\n",g_LeafCanData.m_CurDteType,dpkw100,dpkw101,dpkw102,dpkw103,dpkw104);
+    sprintf(line,"%2d %2d %2d %2d %2d %c",dpkw100,dpkw101,dpkw102,dpkw103,dpkw104,g_LeafCanData.m_CurDteType);
     g_Lcd.setCursor(0,0);
     g_Lcd.print(line);
 
-    sprintf(line,"%c %s %s %s %s %s\n",g_LeafCanData.m_CurDteUnits,distrem0,distrem1,distrem2,distrem3,distrem4);
+    sprintf(line,"%s %s %s %s %s",distrem0,distrem1,distrem2,distrem3,distrem4);
     g_Lcd.setCursor(0,1);
     g_Lcd.print(line);
+
+    return 0;
   }
+  else {
+    return 1;
+  }
+}
+
+uint8_t BattTempScreen()
+{
+  if (g_LeafCanData.DirtyBitsSet(DBF_BATT_TEMP)) {
+    g_LeafCanData.ClearDirtyBits(DBF_BATT_TEMP);
+
+  char line[17];
+  g_Lcd.setCursor(0,0);
+  g_Lcd.print("T1  T2  T3  T4");
+  sprintf(line,"%2d  %2d  %2d  %2d C",g_LeafCanData.m_BatTemp1,g_LeafCanData.m_BatTemp2,g_LeafCanData.m_BatTemp3,g_LeafCanData.m_BatTemp4);
+  g_Lcd.setCursor(0,1);
+  g_Lcd.print(line);
+
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+uint8_t CellPairVoltScreen()
+{
+  if (g_LeafCanData.DirtyBitsSet(DBF_CP_VOLTS)) {
+    g_LeafCanData.ClearDirtyBits(DBF_CP_VOLTS);
+
+  char line[17];
+  g_Lcd.setCursor(0,0);
+  g_Lcd.print("Min  Max  Avg  m");
+  sprintf(line,"%4d %4d %4d V",g_LeafCanData.m_CPVmin,g_LeafCanData.m_CPVmax,g_LeafCanData.m_CPVavg);
+  g_Lcd.setCursor(0,1);
+  g_Lcd.print(line);
+
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+uint8_t SocCapScreen()
+{
+  if (g_LeafCanData.DirtyBitsSet(DBF_SOC_CAP)) {
+    g_LeafCanData.ClearDirtyBits(DBF_SOC_CAP);
+
+  char line[17];
+
+  sprintf(line,"SOC: %2d.%04d %%",g_LeafCanData.m_SOC32/10000,g_LeafCanData.m_SOC32 % 10000);
+  g_Lcd.setCursor(0,0);
+  g_Lcd.print(line);
+  sprintf(line,"Cap: %2d.%04d Ah",g_LeafCanData.m_PackCap/10000,g_LeafCanData.m_PackCap % 10000);
+  g_Lcd.setCursor(0,1);
+  g_Lcd.print(line);
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+uint8_t DrawScreen()
+{
+  uint8_t rc;
+  if (g_CurScreenIdx == 0) {
+    rc = InfoScreen();
+  }
+  else if (g_CurScreenIdx == 1) {
+    rc = DTEScreen();
+  }
+  else if (g_CurScreenIdx == 2) {
+    rc = BattTempScreen();
+  }
+  else if (g_CurScreenIdx == 3) {
+    rc = CellPairVoltScreen();
+  }
+  else {
+    rc = SocCapScreen();
+  }
+
+  return rc;
 }
 
 
@@ -238,7 +323,7 @@ void setContrast(uint8_t contrast)
 
 
 void setup()   
-{    
+{
   /* Setup encoder pins */
   g_RotEnc.Setup();
 
@@ -256,18 +341,19 @@ void setup()
 
   g_Lcd.begin(16,2);
   g_Lcd.setCursor(0,0);
-  g_Lcd.print("  LeafCAN ");
-  g_Lcd.print(VER_STR);
+  g_Lcd.print("Lincomatic");
   g_Lcd.setCursor(0,1);
-  g_Lcd.print("Waiting for CAN");
+  g_Lcd.print("LeafCAN ");
+  g_Lcd.print(VER_STR);
 
   g_CanBus.Init();
-  g_Lcd.setCursor(0,1);
-  g_Lcd.print("Serial init    ");
+  //  g_Lcd.setCursor(0,1);
+  //  g_Lcd.print("Serial init    ");
   Serial.begin(SERIAL_BAUD);
-  g_Lcd.setCursor(0,1);
-  g_Lcd.print("Init Complete  ");
-   
+  //  g_Lcd.setCursor(0,1);
+  //  g_Lcd.print("Init Complete  ");
+
+  g_CurScreenIdx = 0;
 }
 
 
@@ -314,8 +400,7 @@ void loop()
 
     uint8_t prc = g_LeafCanData.ProcessRxMsg(g_CanBus.GetMsgRx());
     if (!prc && ((millis()-g_LastScreenUpdateMs) > LCD_UPDATE_MS)) { // processed a message
-      //uint8_t src = Screen0();
-      uint8_t src = Screen1();
+      uint8_t src = DrawScreen();
       if (!src) {
 	g_LastScreenUpdateMs = millis();
       }
