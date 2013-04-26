@@ -75,9 +75,9 @@
 #define ENC_BIT_A      0
 #define ENC_BIT_B      1
 #define ENC_BIT_SWITCH 2
-#define ENC_DDR DDRC
-#define ENC_PIN PINC
-#define ENC_PORT PORTC
+#define ENC_DDR DDRA
+#define ENC_PIN PINA
+#define ENC_PORT PORTA
 
 //
 // constants
