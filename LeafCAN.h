@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0"
+#define VER_STR "v2.0A1"
 
 //
 // configuration
@@ -39,6 +39,10 @@
 //#define ADA_OLED
 
 #define V2 // v2 hardware
+#define BREADBOARD // don't use - lincomatic's test rig
+#ifdef BREADBOARD
+#define I2CLCD
+#endif
 
 #ifdef V2
 #define BACKLIGHT_PIN 15 // PB7
@@ -72,12 +76,32 @@
  line
    old_AB |= ( ENC_PIN & 0x03 );  //add current state
  */
-#define ENC_BIT_A      0
-#define ENC_BIT_B      1
-#define ENC_BIT_SWITCH 2
+#define ENC_BIT_A   (1 << 0)
+#define ENC_BIT_B   (1 << 1)
+#define ENC_BIT_BTN (1 << 2)
+#ifdef BREADBOARD
+#define ENC_DDR DDRC
+#define ENC_PIN PINC
+#define ENC_PORT PORTC
+#else
 #define ENC_DDR DDRA
 #define ENC_PIN PINA
 #define ENC_PORT PORTA
+#endif
+
+// for DTE screen
+#define DEF_DPKWH10_LOW 20 // default lowest dist/kwh*10 for DTE
+#define DEF_DPKWH10_INCR 10 // default dist/kwh*10 increment for DTE
+
+#define SCNIDX_INFO 0
+#define SCNIDX_DTE  1
+#define SCNIDX_BATT_TEMP 2
+#define SCNIDX_CP_VOLT 3
+#define SCNIDX_SOC_CAP 4
+#define SCREEN_CNT 5
+
+#define REQ_INTERVAL_7BB 20 // # ms between 7BB requests
+
 
 //
 // constants
@@ -85,9 +109,7 @@
 #define KW_FACTOR 7473L // 80 is from ingineer, surfingslovak prefers 74.73
 #define GIDS_LB  49 // low batt
 #define GIDS_VLB 24 // very low batt
-#define GIDS_TURTLE 6 // really varies from 4-6 ... 
-#define DEF_DPKWH10_LOW 30 // default lowest dist/kwh*10 for DTE
-#define DEF_DPKWH10_INCR 5 // default dist/kwh*10 increment for DTE
+#define GIDS_TURTLE 6 // really varies from 4-6 ...
 
 
 

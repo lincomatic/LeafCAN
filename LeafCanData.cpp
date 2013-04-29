@@ -45,6 +45,9 @@ LeafCanData::LeafCanData()
   m_PackCap = 0;
   */
 
+  m_Cur7BBFrameCnt = 0;
+  m_Cur7BBReqFrameIdx = 255;
+
   // calculated constants
   m_WhL = ((((int32_t)GIDS_LB) * KW_FACTOR)+50L) / 100L;
   m_WhV = ((((int32_t)GIDS_VLB) * KW_FACTOR)+50L) / 100L;
@@ -53,7 +56,7 @@ LeafCanData::LeafCanData()
   // startup settings
   m_DpKWh10_Low = DEF_DPKWH10_LOW; // lowest dist/KWh * 10;
   m_DpKWh10_Incr = DEF_DPKWH10_INCR; // DpKWh10 increment 
-  m_CurDteType = 'L';
+  m_CurDteType = 'V';
 }
 
 // return = 0 = processed a CAN msg
@@ -120,6 +123,9 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
     }
     rc = 0;
   }
+  else if (rxmsg->id.std == 0x7bb) {
+    rc = Process7BBFrame(candata);
+  }
       /*not yet
       else if (rxmsg->id.std == 0x1da) {
 	// RPM
@@ -137,67 +143,141 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
   return rc;
 }
 
-#ifdef notyet
+// group = 255 requests next msg in current group
+void LeafCanData::Req79B(uint8_t group)
+{
+  st_cmd_t *txmsg = g_CanBus.GetMsgTx();
+  uint8_t *candata = txmsg->pt_data;
 
-void sendReq() {
-  uint8_t *candata = rxmsg->pt_data;
+  txmsg->cmd = CMD_TX_DATA;
+  txmsg->ctrl.ide = 0; // CAN 2.0A
+  txmsg->id.std = 0x79b;
   txmsg->dlc = 8;
+  if (group != 255) {
+    candata[0] = 0x02;
+    candata[1] = 0x21;
+    candata[2] = group;
+    if (group == 1) {
+      m_Cur7BBFrameCnt = 6;
+    }
+    else if (group == 2) {
+      m_Cur7BBFrameCnt = 29;
+    }
+    else if (group == 3) {
+      m_Cur7BBFrameCnt = 5;
+    }
+    else if (group == 4) {
+     m_Cur7BBFrameCnt = 3;
+    }
+    else if (group == 5) {
+      m_Cur7BBFrameCnt = 11;
+    }
+    else if (group == 6) {
+      m_Cur7BBFrameCnt = 4;
+    }
 
-  candata[0] = 0x02;
-  candata[1] = 0x21;
-  candata[2] = 0x01;
+    m_Cur79BGroup = group;
+    m_Cur7BBRcvFrameIdx = 0;
+    m_Cur7BBReqFrameIdx = 1;
+  }
+  else { // 255 - req next msg
+    candata[0] = 0x30;
+    candata[1] = 0x01;
+    candata[2] = 0x00;
+  }
   candata[3] = 0xff;
   candata[4] = 0xff;
   candata[5] = 0xff;
   candata[6] = 0xff;
   candata[7] = 0xff;
 
-    static char data[8] = {0x02, 0x21, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff};
-    if(reqMsgCnt<99){
-        switch (reqMsgCnt){
-            case 0:
-                can1.monitor(false); // set to active mode
-                can1SleepMode = 0; // enable TX
-                data[0]=0x02; //change to request group 1
-                data[1]=0x21;
-                data[2]=0x01;
-                break;
-            case 6: // group 1 has 6 frames
-                can1.monitor(false); // set to active mode
-                can1SleepMode = 0; // enable TX
-                data[0]=0x02; //change to request group 2 (cp data)
-                data[1]=0x21;
-                data[2]=0x02;
-                break;
-            case 35: // group 2 has 29 frames
-                data[0]=0x02; //change to request group 3
-                data[1]=0x21;
-                data[2]=0x03;
-                break;
-            case 40: // group 3 has 5 frames
-                data[0]=0x02; //change to request group 4 (temperature)
-                data[1]=0x21;
-                data[2]=0x04;
-                break;
-            case 43: // group 4 has 3 frames
-                data[0]=0x02; //change to request group 5
-                data[1]=0x21;
-                data[2]=0x05;
-                break;
-            case 54: // group 5 has 11 frames
-                reqMsgCnt = 99;
-                can1SleepMode = 1; // disable TX
-                can1.monitor(true); // set to snoop mode
-                msgReq.detach(); // stop ticker
-            default:
-                data[0]=0x30; //change to request next line message
-                data[1]=0x01;
-                data[2]=0x00;
-        }
-        can1.write(CANMessage(0x79b, data, 8));
-        reqMsgCnt++;
-    }
-}
+  g_CanBus.Write();
+  m_Last7BBreqTime = millis();
+#ifdef SDBG
+  Serial.print("group: ");Serial.print(group,DEC);Serial.print(" framecnt: ");Serial.print(m_Cur7BBFrameCnt,DEC);
 #endif
+}
 
+uint8_t LeafCanData::ReqNext7BBFrame()
+{
+  if ((m_Cur7BBReqFrameIdx < m_Cur7BBFrameCnt) &&
+      m_Cur7BBRcvFrameIdx &&
+      ((millis()-m_Last7BBreqTime) >= REQ_INTERVAL_7BB)) {
+    Req79B(255); // req next 7BB msg
+    m_Cur7BBReqFrameIdx++;
+  }
+}
 
+uint8_t LeafCanData::Process7BBFrame(uint8_t *candata)
+{
+#ifdef SDBG
+  Serial.print(" 7BB:");Serial.print(candata[0],HEX);
+#endif
+  if (m_Cur79BGroup == 1) {
+    if (candata[0] == 0x10) {
+      m_Cur7BBRcvFrameIdx = 1;
+    }
+    else if (candata[0] == 0x21) {
+      m_Cur7BBRcvFrameIdx = 2;
+    }
+    else if (candata[0] == 0x22) {
+      m_Cur7BBRcvFrameIdx = 3;
+    }
+    else if (candata[0] == 0x23) {
+      m_Cur7BBRcvFrameIdx = 4;
+    }
+    else if ((m_Cur7BBRcvFrameIdx == 4) && (candata[0] == 0x24)) {
+      m_PackHealth = candata[2];
+      m_PackHealth <<= 8;
+      m_PackHealth |= candata[3];
+      m_SOC32 = candata[5];
+      m_SOC32 <<= 8;
+      m_SOC32 |= candata[6];
+      m_SOC32 <<= 8;
+      m_SOC32 |= candata[7];
+      m_Cur7BBRcvFrameIdx = 5;
+    }
+    else if ((m_Cur7BBRcvFrameIdx == 5) && (candata[0] == 0x25)) {
+      m_PackCap = candata[2];
+      m_PackCap <<= 8;
+      m_PackCap |= candata[3];
+      m_PackCap <<= 8;
+      m_PackCap |= candata[4];
+      m_Cur7BBRcvFrameIdx = 6;
+      m_Cur7BBFrameCnt = 0;
+      //      Serial.print(" soc:");Serial.print(m_SOC32);Serial.print(" c:");Serial.print(m_PackCap);Serial.print(" h:");Serial.print(m_PackHealth);
+      SetDirtyBits(DBF_SOC_CAP);
+    }
+  }
+  else if (m_Cur79BGroup == 2) {
+    if (candata[0] == 0x10) {
+      m_CPVmin = 9999;
+      m_CPVmax = 0;
+      m_CPVavg = 0;
+    }
+    else {
+      m_CPVavg /= 96;
+      SetDirtyBits(DBF_CP_VOLTS);
+    }
+    
+  }
+  else if (m_Cur79BGroup == 4) {
+    if (candata[0] == 0x10) {
+      m_BattTemp1 = candata[6];
+      m_Cur7BBRcvFrameIdx = 1;
+    }
+    else if ((m_Cur7BBRcvFrameIdx == 1) && (candata[0] == 0x21)) {
+      m_BattTemp2 = candata[2];
+      m_BattTemp3 = candata[5];
+      m_Cur7BBRcvFrameIdx = 2;
+    }
+    else if ((m_Cur7BBRcvFrameIdx == 2) && (candata[0] == 0x22)) {
+      m_BattTemp4 = candata[1];
+      m_Cur7BBRcvFrameIdx = 3;
+      m_Cur7BBFrameCnt = 0;
+      SetDirtyBits(DBF_BATT_TEMP);
+    }
+  }
+
+  return 0;
+}

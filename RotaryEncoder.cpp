@@ -28,7 +28,7 @@
    #include "WProgram.h"
 #endif
 
-#include "RotaryEncoder.h"
+#include "LeafCAN.h"
 
 int8_t RotaryEncoder::enc_states[16] = {
   0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};

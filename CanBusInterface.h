@@ -41,6 +41,7 @@ public:
   uint8_t Read();
   uint8_t Write();
   st_cmd_t *GetMsgRx() { return &m_CanMsgRx; }
+  st_cmd_t *GetMsgTx() { return &m_CanMsgTx; }
 };
 
 #endif // _CANBUSINTERFACE_H_

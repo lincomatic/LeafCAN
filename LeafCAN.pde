@@ -38,13 +38,14 @@ CanBusInterface g_CanBus;
 // rs/rw/enable/d4/d5/d6/d7
 //#include <Adafruit_CharacterOLED.h>
 Adafruit_CharacterOLED lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
+#elif defined(BREADBOARD)
+#include <Wire.h>
+#include <LiquidTWI2.h>
+LiquidTWI2 g_Lcd(0x20,1);
 #else
 #include <LiquidCrystal.h>
-#ifdef V2
 LiquidCrystal g_Lcd(37,38,11,12,13,14); // PE5/PE6/PB3/PB4/PB5/PB6
-#else 
-LiquidCrystal g_Lcd(21,20,16,17,18,19); // PC5/PC4/PC0/PC1/PC2/PC3
-#endif
+//LiquidCrystal g_Lcd(21,20,16,17,18,19); // PC5/PC4/PC0/PC1/PC2/PC3
 //LiquidCrystal g_Lcd(37,38,11,12,13,14); // PE5/PE6/PB3/PB4/PB5/PB6
 #endif // ADA_OLED
 
@@ -56,14 +57,14 @@ uint8_t g_LcdEnabled = 1;
 uint8_t g_Brightness = 0;
 #endif // BACKLIGHT_PIN
 
-unsigned long g_LastScreenUpdateMs;
-uint8_t g_CurScreenIdx;
+unsigned long g_LastScreenUpdateMs=0;
+int8_t g_CurScreenIdx = SCNIDX_INFO;
 
 #include "RotaryEncoder.h"
 RotaryEncoder g_RotEnc;
 //encoder stuff
-int8_t lastbtnstate = ENC_BIT_BTN; // 0=pressed
-int8_t lastcount = 0;
+int8_t g_LastBtnState = ENC_BIT_BTN; // 0=pressed
+int8_t g_LastCount = 0;
 
 
 // print 2-digit number 100 = A0, 113 = B3, etc
@@ -94,7 +95,7 @@ int DistRem(int32_t whRem,int32_t whMin,int distPerKwhx10)
 
 // KWh gids fixedbars
 // volts soc kw
-uint8_t InfoScreen()
+uint8_t InfoScreen(uint8_t force)
 {
   uint8_t rc = 1;
   char sf1[10],sf2[10],sf3[10];
@@ -102,7 +103,7 @@ uint8_t InfoScreen()
   int w,f;
 
   // top line: KWh gids fixedbars
-  if (g_LeafCanData.DirtyBitsSet(DBF_WH_REMAINING |DBF_GIDS|DBF_FIXED_FUEL_BARS)) {
+  if (force || g_LeafCanData.DirtyBitsSet(DBF_WH_REMAINING |DBF_GIDS|DBF_FIXED_FUEL_BARS)) {
     rc = 0;
     g_LeafCanData.ClearDirtyBits(DBF_WH_REMAINING |DBF_GIDS|DBF_FIXED_FUEL_BARS);
 
@@ -167,7 +168,6 @@ uint8_t InfoScreen()
       sprintf(sf3,"%d.%02d",(int)(w/1000),(int)((w%1000)/10));
     }
 
-
     sprintf(line,"%s %s %s",sf1,sf2,sf3);
     g_Lcd.setCursor(0,1);
     g_Lcd.print(line);
@@ -181,9 +181,9 @@ uint8_t InfoScreen()
 // dist     dist     dist     dist     dist
 //
 // DTEtype: = 'L' = low batt, 'V' = very low batt, 'T' = turtle
-uint8_t DTEScreen()
+uint8_t DTEScreen(uint8_t force)
 {
-  if (g_LeafCanData.DirtyBitsSet(DBF_WH_REMAINING)) {
+  if (force || g_LeafCanData.DirtyBitsSet(DBF_WH_REMAINING)) {
     g_LeafCanData.ClearDirtyBits(DBF_WH_REMAINING);
 
     int32_t whmin;
@@ -205,7 +205,7 @@ uint8_t DTEScreen()
     SPrintDist(DistRem(wh,whmin,dpkw104),distrem4);
 
     char line[17];
-    sprintf(line,"%2d %2d %2d %2d %2d %c",dpkw100,dpkw101,dpkw102,dpkw103,dpkw104,g_LeafCanData.m_CurDteType);
+    sprintf(line,"%2d %2d %2d %2d %2d %c",(int)dpkw100,(int)dpkw101,(int)dpkw102,(int)dpkw103,(int)dpkw104,g_LeafCanData.m_CurDteType);
     g_Lcd.setCursor(0,0);
     g_Lcd.print(line);
 
@@ -220,15 +220,15 @@ uint8_t DTEScreen()
   }
 }
 
-uint8_t BattTempScreen()
+uint8_t BattTempScreen(uint8_t force)
 {
-  if (g_LeafCanData.DirtyBitsSet(DBF_BATT_TEMP)) {
+  if (force || g_LeafCanData.DirtyBitsSet(DBF_BATT_TEMP)) {
     g_LeafCanData.ClearDirtyBits(DBF_BATT_TEMP);
 
   char line[17];
   g_Lcd.setCursor(0,0);
   g_Lcd.print("T1  T2  T3  T4");
-  sprintf(line,"%2d  %2d  %2d  %2d C",g_LeafCanData.m_BatTemp1,g_LeafCanData.m_BatTemp2,g_LeafCanData.m_BatTemp3,g_LeafCanData.m_BatTemp4);
+  sprintf(line,"%2d  %2d  %2d  %2d C",g_LeafCanData.m_BattTemp1,g_LeafCanData.m_BattTemp2,g_LeafCanData.m_BattTemp3,g_LeafCanData.m_BattTemp4);
   g_Lcd.setCursor(0,1);
   g_Lcd.print(line);
 
@@ -239,9 +239,9 @@ uint8_t BattTempScreen()
   }
 }
 
-uint8_t CellPairVoltScreen()
+uint8_t CellPairVoltScreen(uint8_t force)
 {
-  if (g_LeafCanData.DirtyBitsSet(DBF_CP_VOLTS)) {
+  if (force || g_LeafCanData.DirtyBitsSet(DBF_CP_VOLTS)) {
     g_LeafCanData.ClearDirtyBits(DBF_CP_VOLTS);
 
   char line[17];
@@ -258,19 +258,20 @@ uint8_t CellPairVoltScreen()
   }
 }
 
-uint8_t SocCapScreen()
+uint8_t SocCapScreen(uint8_t force)
 {
-  if (g_LeafCanData.DirtyBitsSet(DBF_SOC_CAP)) {
+  if (force || g_LeafCanData.DirtyBitsSet(DBF_SOC_CAP)) {
     g_LeafCanData.ClearDirtyBits(DBF_SOC_CAP);
-
-  char line[17];
-
-  sprintf(line,"SOC: %2d.%04d %%",g_LeafCanData.m_SOC32/10000,g_LeafCanData.m_SOC32 % 10000);
-  g_Lcd.setCursor(0,0);
-  g_Lcd.print(line);
-  sprintf(line,"Cap: %2d.%04d Ah",g_LeafCanData.m_PackCap/10000,g_LeafCanData.m_PackCap % 10000);
-  g_Lcd.setCursor(0,1);
-  g_Lcd.print(line);
+    
+    char line[17];
+    
+    sprintf(line,"SOC: %2d.%04d%%",(int)(g_LeafCanData.m_SOC32/10000),(int)(g_LeafCanData.m_SOC32 % 10000));
+    g_Lcd.setCursor(0,0);
+    g_Lcd.print(line);
+    sprintf(line,"%2d.%04dAh %2d.%02d%%",(int)(g_LeafCanData.m_PackCap/10000),(int)(g_LeafCanData.m_PackCap % 10000),
+                (int)(g_LeafCanData.m_PackHealth/100),(int)(g_LeafCanData.m_PackHealth % 100));
+    g_Lcd.setCursor(0,1);
+    g_Lcd.print(line);
     return 0;
   }
   else {
@@ -278,23 +279,24 @@ uint8_t SocCapScreen()
   }
 }
 
-uint8_t DrawScreen()
+// return 0 if screen redrawn
+uint8_t DrawScreen(uint8_t force=0)
 {
   uint8_t rc;
-  if (g_CurScreenIdx == 0) {
-    rc = InfoScreen();
+  if (g_CurScreenIdx == SCNIDX_INFO) {
+    rc = InfoScreen(force);
   }
-  else if (g_CurScreenIdx == 1) {
-    rc = DTEScreen();
+  else if (g_CurScreenIdx == SCNIDX_DTE) {
+    rc = DTEScreen(force);
   }
-  else if (g_CurScreenIdx == 2) {
-    rc = BattTempScreen();
+  else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
+    rc = BattTempScreen(force);
   }
-  else if (g_CurScreenIdx == 3) {
-    rc = CellPairVoltScreen();
+  else if (g_CurScreenIdx == SCNIDX_CP_VOLT) {
+    rc = CellPairVoltScreen(force);
   }
-  else {
-    rc = SocCapScreen();
+  else { // SCNIDX_SOC_CAP
+    rc = SocCapScreen(force);
   }
 
   return rc;
@@ -324,6 +326,7 @@ void setContrast(uint8_t contrast)
 
 void setup()   
 {
+  g_LastScreenUpdateMs = millis();
   /* Setup encoder pins */
   g_RotEnc.Setup();
 
@@ -347,33 +350,39 @@ void setup()
   g_Lcd.print(VER_STR);
 
   g_CanBus.Init();
-  //  g_Lcd.setCursor(0,1);
-  //  g_Lcd.print("Serial init    ");
   Serial.begin(SERIAL_BAUD);
-  //  g_Lcd.setCursor(0,1);
-  //  g_Lcd.print("Init Complete  ");
-
-  g_CurScreenIdx = 0;
+  //  Serial.println("Canbus active");
 }
-
 
 void ServiceEncoder()
 {
   int8_t count,btnstate;
 
   count = g_RotEnc.Read(&btnstate);
-  if (count != lastcount) {
-    Serial.println(count, DEC);
-    lastcount = count;
+  if (count != g_LastCount) {
+    g_CurScreenIdx += count;
+    while (g_CurScreenIdx > SCREEN_CNT-1) g_CurScreenIdx -= SCREEN_CNT;
+    while (g_CurScreenIdx < 0) g_CurScreenIdx += SCREEN_CNT;
+	g_LastScreenUpdateMs = millis()-1000;
+    g_Lcd.clear();
+    DrawScreen(1);
+    g_RotEnc.ResetCount();
+    g_LastCount = 0;
   }
 
   /* encoder button */
-  if (btnstate != lastbtnstate) {
-    g_RotEnc.ResetCount();
-    lastcount = 0;
+  if (btnstate != g_LastBtnState) {
+    if (btnstate) { // released
+      if (g_CurScreenIdx == SCNIDX_DTE) {
+        if (g_LeafCanData.m_CurDteType == 'L') g_LeafCanData.m_CurDteType = 'V';
+        else if (g_LeafCanData.m_CurDteType == 'V') g_LeafCanData.m_CurDteType = 'T';
+        else g_LeafCanData.m_CurDteType = 'L';
+        DrawScreen(1);
+      }
+    }
     //    Serial.println(btnstate ? "btnrelease" : "btnpress");
   }
-  lastbtnstate = btnstate;
+  g_LastBtnState = btnstate;
 }
 
 void loop()                     
@@ -405,6 +414,29 @@ void loop()
 	g_LastScreenUpdateMs = millis();
       }
     }
+
+    if ((millis()-g_LeafCanData.m_Last7BBreqTime) > 2000) {
+      uint8_t group;
+      switch(g_CurScreenIdx) {
+      case SCNIDX_SOC_CAP:
+	group = 1;
+	break;
+      case SCNIDX_CP_VOLT:
+	group = 2;
+	break;
+      case SCNIDX_BATT_TEMP:
+	group = 4;
+	break;
+      default:
+	group = 255;
+      }
+
+      if (group != 255) {
+	g_LeafCanData.Req79B(group);
+      }
+    }
+
+    g_LeafCanData.ReqNext7BBFrame();
   }
 }
 

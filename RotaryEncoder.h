@@ -40,12 +40,13 @@
  old_AB |= ( ENC_PIN & 0x03 );  //add current state
  */
 
-#define ENC_BIT_A (1<<0)
-#define ENC_BIT_B (1<<1)
-#define ENC_BIT_BTN (1<<2)
-#define ENC_DDR DDRC
-#define ENC_PIN PINC
-#define ENC_PORT PORTC
+//moved to LeafCAN.h
+//#define ENC_BIT_A (1<<0)
+//#define ENC_BIT_B (1<<1)
+//#define ENC_BIT_BTN (1<<2)
+//#define ENC_DDR DDRC
+//#define ENC_PIN PINC
+//#define ENC_PORT PORTC
 #define DEBOUNCE_DELAY 50 // ms
 
 class RotaryEncoder {

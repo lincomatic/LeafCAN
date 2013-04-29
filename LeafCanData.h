@@ -41,16 +41,24 @@
 class LeafCanData {
   uint16_t m_DirtyBits;
 public:
+  // 79B msg response is 7BB
+  unsigned long m_Last7BBreqTime;
+  uint8_t m_Cur79BGroup;
+  uint8_t m_Cur7BBReqFrameIdx;
+  uint8_t m_Cur7BBRcvFrameIdx;
+  uint8_t m_Cur7BBFrameCnt;
+public:
   uint16_t m_PackVolts; // Pack Volts * 2
   int16_t m_PackAmps;  // Pack Amps * 2 (positive = charging)
   uint16_t m_SOC;   // = SOC (% * 10)
   uint16_t m_Gids;
   uint8_t  m_GOMFuelBars;  // fuel bars displayed in dash GOM
   uint8_t  m_FixedFuelBars; // fixed fuel bars * 10
-  uint8_t m_BatTemp1,m_BatTemp2,m_BatTemp3,m_BatTemp4; // battery temperature (C)
+  uint8_t m_BattTemp1,m_BattTemp2,m_BattTemp3,m_BattTemp4; // battery temperature (C)
   uint16_t m_CPVmin,m_CPVmax,m_CPVavg; // cell pair min/max/avg voltage (mV)
   int32_t m_SOC32; // high precision SOC (% * 10000)
   int32_t m_PackCap; // pack capacity (Ah * 10000)
+  int32_t m_PackHealth; // health (% * 100)
 
   // calculated values
   int32_t m_W; // Watts (negative = charging)
@@ -79,6 +87,9 @@ public:
   }
 
   uint8_t ProcessRxMsg(st_cmd_t *rxmsg);
+  uint8_t Process7BBFrame(uint8_t *candata);
+  void Req79B(uint8_t group);
+  uint8_t ReqNext7BBFrame();
 };
 
 #endif // _LEAFCANDATA_H_
