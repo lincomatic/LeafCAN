@@ -59,6 +59,7 @@ uint8_t g_Brightness = 0;
 
 unsigned long g_LastScreenUpdateMs=0;
 int8_t g_CurScreenIdx = SCNIDX_INFO;
+char g_TempUnit = 'C';
 
 #include "RotaryEncoder.h"
 RotaryEncoder g_RotEnc;
@@ -220,6 +221,32 @@ uint8_t DTEScreen(uint8_t force)
   }
 }
 
+uint8_t VAScreen(uint8_t force)
+{
+  char line[17];
+  if (force || g_LeafCanData.DirtyBitsSet(DBF_PACK_AMPS|DBF_PACK_VOLTS)) {
+    g_LeafCanData.ClearDirtyBits(DBF_PACK_AMPS|DBF_PACK_VOLTS);
+    // nnn.n
+    sprintf(line,"%3d.%cV",(int)(g_LeafCanData.m_PackVolts/2),(g_LeafCanData.m_PackVolts & 1) ? '5' : '0');
+    g_Lcd.setCursor(0,0);
+    g_Lcd.print(line);
+    int16_t amps = -g_LeafCanData.m_PackAmps;
+    sprintf(line,"%3d.%cA",(int)(amps/2),(amps % 2) ? '5' : '0');
+    g_Lcd.setCursor(0,1);
+    g_Lcd.print(line);
+
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+int CtoF(int c)
+{
+  return (c * 9)/5 + 32;
+}
+
 uint8_t BattTempScreen(uint8_t force)
 {
   if (force || g_LeafCanData.DirtyBitsSet(DBF_BATT_TEMP)) {
@@ -227,8 +254,14 @@ uint8_t BattTempScreen(uint8_t force)
 
   char line[17];
   g_Lcd.setCursor(0,0);
-  g_Lcd.print("T1  T2  T3  T4");
-  sprintf(line,"%2d  %2d  %2d  %2d C",g_LeafCanData.m_BattTemp1,g_LeafCanData.m_BattTemp2,g_LeafCanData.m_BattTemp3,g_LeafCanData.m_BattTemp4);
+  sprintf(line,"T1  T2  T3  T4 %c",g_TempUnit);
+  g_Lcd.print(line);
+  if (g_TempUnit == 'C') {
+  sprintf(line,"%2d  %2d  %2d  %2d",(int)g_LeafCanData.m_BattTemp1,(int)g_LeafCanData.m_BattTemp2,(int)g_LeafCanData.m_BattTemp3,(int)g_LeafCanData.m_BattTemp4);
+  }
+  else {
+    sprintf(line,"%-3d %-3d %-3d %-3d",CtoF(g_LeafCanData.m_BattTemp1),CtoF(g_LeafCanData.m_BattTemp2),CtoF(g_LeafCanData.m_BattTemp3),CtoF(g_LeafCanData.m_BattTemp4));
+  }
   g_Lcd.setCursor(0,1);
   g_Lcd.print(line);
 
@@ -246,8 +279,8 @@ uint8_t CellPairVoltScreen(uint8_t force)
 
   char line[17];
   g_Lcd.setCursor(0,0);
-  g_Lcd.print("Min  Max  Avg  m");
-  sprintf(line,"%4d %4d %4d V",g_LeafCanData.m_CPVmin,g_LeafCanData.m_CPVmax,g_LeafCanData.m_CPVavg);
+  g_Lcd.print("Min  Max  Diff m");
+  sprintf(line,"%4d %4d %4d V",(int)g_LeafCanData.m_CPVmin,(int)g_LeafCanData.m_CPVmax,(int)(g_LeafCanData.m_CPVmax-g_LeafCanData.m_CPVmin));
   g_Lcd.setCursor(0,1);
   g_Lcd.print(line);
 
@@ -265,7 +298,7 @@ uint8_t SocCapScreen(uint8_t force)
     
     char line[17];
     
-    sprintf(line,"SOC: %2d.%04d%%",(int)(g_LeafCanData.m_SOC32/10000),(int)(g_LeafCanData.m_SOC32 % 10000));
+    sprintf(line,"SOC %2d.%04d%%",(int)(g_LeafCanData.m_SOC32/10000),(int)(g_LeafCanData.m_SOC32 % 10000));
     g_Lcd.setCursor(0,0);
     g_Lcd.print(line);
     sprintf(line,"%2d.%04dAh %2d.%02d%%",(int)(g_LeafCanData.m_PackCap/10000),(int)(g_LeafCanData.m_PackCap % 10000),
@@ -288,6 +321,9 @@ uint8_t DrawScreen(uint8_t force=0)
   }
   else if (g_CurScreenIdx == SCNIDX_DTE) {
     rc = DTEScreen(force);
+  }
+  else if (g_CurScreenIdx == SCNIDX_VA) {
+    rc = VAScreen(force);
   }
   else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
     rc = BattTempScreen(force);
@@ -379,6 +415,15 @@ void ServiceEncoder()
         else g_LeafCanData.m_CurDteType = 'L';
         DrawScreen(1);
       }
+      else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
+	if (g_TempUnit == 'C') {
+	  g_TempUnit = 'F';
+	}
+	else {
+	  g_TempUnit = 'C';
+	}
+	DrawScreen(1);
+      }
     }
     //    Serial.println(btnstate ? "btnrelease" : "btnpress");
   }
@@ -415,14 +460,15 @@ void loop()
       }
     }
 
-    if ((millis()-g_LeafCanData.m_Last7BBreqTime) > 2000) {
+    if (
+        ((millis()-g_LeafCanData.m_Last7BBreqTime) > 1000)) {
       uint8_t group;
       switch(g_CurScreenIdx) {
       case SCNIDX_SOC_CAP:
 	group = 1;
 	break;
       case SCNIDX_CP_VOLT:
-	group = 2;
+	group = 3;
 	break;
       case SCNIDX_BATT_TEMP:
 	group = 4;

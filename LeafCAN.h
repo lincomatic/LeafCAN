@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0A1"
+#define VER_STR "v2.0A2"
 
 //
 // configuration
@@ -95,10 +95,11 @@
 
 #define SCNIDX_INFO 0
 #define SCNIDX_DTE  1
-#define SCNIDX_BATT_TEMP 2
-#define SCNIDX_CP_VOLT 3
-#define SCNIDX_SOC_CAP 4
-#define SCREEN_CNT 5
+#define SCNIDX_VA   2
+#define SCNIDX_BATT_TEMP 3
+#define SCNIDX_CP_VOLT 4
+#define SCNIDX_SOC_CAP 5
+#define SCREEN_CNT 6
 
 #define REQ_INTERVAL_7BB 20 // # ms between 7BB requests
 

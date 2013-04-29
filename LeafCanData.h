@@ -55,7 +55,7 @@ public:
   uint8_t  m_GOMFuelBars;  // fuel bars displayed in dash GOM
   uint8_t  m_FixedFuelBars; // fixed fuel bars * 10
   uint8_t m_BattTemp1,m_BattTemp2,m_BattTemp3,m_BattTemp4; // battery temperature (C)
-  uint16_t m_CPVmin,m_CPVmax,m_CPVavg; // cell pair min/max/avg voltage (mV)
+  uint16_t m_CPVmin,m_CPVmax; // cell pair min/max voltage (mV)
   int32_t m_SOC32; // high precision SOC (% * 10000)
   int32_t m_PackCap; // pack capacity (Ah * 10000)
   int32_t m_PackHealth; // health (% * 100)

@@ -164,7 +164,8 @@ void LeafCanData::Req79B(uint8_t group)
       m_Cur7BBFrameCnt = 29;
     }
     else if (group == 3) {
-      m_Cur7BBFrameCnt = 5;
+      //      m_Cur7BBFrameCnt = 5;
+      m_Cur7BBFrameCnt = 3; // we only need the 1st 3 lines
     }
     else if (group == 4) {
      m_Cur7BBFrameCnt = 3;
@@ -243,23 +244,32 @@ uint8_t LeafCanData::Process7BBFrame(uint8_t *candata)
       m_PackCap |= candata[3];
       m_PackCap <<= 8;
       m_PackCap |= candata[4];
+      
       m_Cur7BBRcvFrameIdx = 6;
       m_Cur7BBFrameCnt = 0;
       //      Serial.print(" soc:");Serial.print(m_SOC32);Serial.print(" c:");Serial.print(m_PackCap);Serial.print(" h:");Serial.print(m_PackHealth);
       SetDirtyBits(DBF_SOC_CAP);
     }
   }
-  else if (m_Cur79BGroup == 2) {
+  else if (m_Cur79BGroup == 3) {
     if (candata[0] == 0x10) {
-      m_CPVmin = 9999;
-      m_CPVmax = 0;
-      m_CPVavg = 0;
+      m_Cur7BBRcvFrameIdx = 1;
     }
-    else {
-      m_CPVavg /= 96;
+    else if ((m_Cur7BBRcvFrameIdx == 1) && (candata[0] == 0x21)) {
+      m_CPVmax = candata[7];
+      m_Cur7BBRcvFrameIdx = 2;
+    }
+    else if ((m_Cur7BBRcvFrameIdx == 2) && (candata[0] == 0x22)) {
+      m_CPVmax <<= 8;
+      m_CPVmax |= candata[1];
+      m_CPVmin = candata[2];
+      m_CPVmin <<= 8;
+      m_CPVmin |= candata[3];
+
+      m_Cur7BBRcvFrameIdx = 3;
+      m_Cur7BBFrameCnt = 0;
       SetDirtyBits(DBF_CP_VOLTS);
     }
-    
   }
   else if (m_Cur79BGroup == 4) {
     if (candata[0] == 0x10) {
