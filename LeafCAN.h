@@ -36,10 +36,12 @@
 // due to a bug in Arduino, you must uncomment
 //  //#include <Adafruit_CharacterOLED.h>
 // in LeafCAN.pde if ADA_OLED is defined
-//#define ADA_OLED
+#define ADA_OLED
 
+#define V2O3
 #define V2 // v2 hardware
-#define BREADBOARD // don't use - lincomatic's test rig
+//#define BREADBOARD // don't use - lincomatic's test rig
+
 #ifdef BREADBOARD
 #define I2CLCD
 #endif
@@ -48,6 +50,13 @@
 #define BACKLIGHT_PIN 15 // PB7
 #define CONTRAST_PIN 36 // PE4
 #endif // V2
+
+#ifdef V2O3
+#define INVERT_ENC_BTN
+#define GLED_PIN 19 // PC3
+#define BLED_PIN 20 // PC4
+#define RLED_PIN 21 // PC5
+#endif
 
 #define BACKLIGHT_TIMEOUT 5000 // turn off backlight after CAN bus idle for (ms)
 #define SERIAL_BAUD 115200
@@ -79,7 +88,7 @@
 #define ENC_BIT_A   (1 << 0)
 #define ENC_BIT_B   (1 << 1)
 #define ENC_BIT_BTN (1 << 2)
-#ifdef BREADBOARD
+#if defined(BREADBOARD)||defined(V2O3)
 #define ENC_DDR DDRC
 #define ENC_PIN PINC
 #define ENC_PORT PORTC
@@ -103,6 +112,7 @@
 
 #define REQ_INTERVAL_7BB 20 // # ms between 7BB requests
 
+#define CAN_READ_TIMEOUT 250 // ms - assume CAN bus is off when exceeded
 
 //
 // constants

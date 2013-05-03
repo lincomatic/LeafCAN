@@ -25,6 +25,7 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#include <avr/pgmspace.h>
 #include "LeafCAN.h"
 
 //
@@ -36,8 +37,8 @@ CanBusInterface g_CanBus;
 
 #ifdef ADA_OLED
 // rs/rw/enable/d4/d5/d6/d7
-//#include <Adafruit_CharacterOLED.h>
-Adafruit_CharacterOLED lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
+#include <Adafruit_CharacterOLED.h>
+Adafruit_CharacterOLED g_Lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
 #elif defined(BREADBOARD)
 #include <Wire.h>
 #include <LiquidTWI2.h>
@@ -66,6 +67,13 @@ RotaryEncoder g_RotEnc;
 //encoder stuff
 int8_t g_LastBtnState = ENC_BIT_BTN; // 0=pressed
 int8_t g_LastCount = 0;
+
+void LcdPrint_P(const prog_char *s)
+{
+  char buf[17];
+  strcpy_P(buf,s);
+  g_Lcd.print(buf);
+}
 
 
 // print 2-digit number 100 = A0, 113 = B3, etc
@@ -343,8 +351,13 @@ uint8_t DrawScreen(uint8_t force=0)
 //0=off 255=max bright
 void setBackLight(uint8_t brightness)
 {
+#ifdef ADA_OLED
+  if (brightness) g_Lcd.display();
+  else g_Lcd.noDisplay();
+#else
   //  analogWrite(BACKLIGHT_PIN,brightness);
   digitalWrite(BACKLIGHT_PIN,brightness ? HIGH : LOW);
+#endif
 
   g_Brightness = brightness;
 }
@@ -362,9 +375,23 @@ void setContrast(uint8_t contrast)
 
 void setup()   
 {
+#ifdef RLED_PIN
+  pinMode(RLED_PIN,OUTPUT);
+  digitalWrite(RLED_PIN,HIGH); // turn off
+#endif
+#ifdef GLED_PIN
+  pinMode(GLED_PIN,OUTPUT);
+  digitalWrite(GLED_PIN,HIGH);
+#endif
+#ifdef BLED_PIN
+  pinMode(BLED_PIN,OUTPUT);
+  digitalWrite(BLED_PIN,HIGH);
+#endif
+
   g_LastScreenUpdateMs = millis();
   /* Setup encoder pins */
   g_RotEnc.Setup();
+
 
 #ifdef BACKLIGHT_PIN
   pinMode(BACKLIGHT_PIN,OUTPUT);
@@ -380,14 +407,16 @@ void setup()
 
   g_Lcd.begin(16,2);
   g_Lcd.setCursor(0,0);
-  g_Lcd.print("Lincomatic");
-  g_Lcd.setCursor(0,1);
-  g_Lcd.print("LeafCAN ");
+  LcdPrint_P(PSTR("LeafCAN "));
   g_Lcd.print(VER_STR);
+  g_Lcd.setCursor(0,1);
+  LcdPrint_P(PSTR("by Lincomatic"));
 
-  g_CanBus.Init();
+//  g_CanBus.Init();
   Serial.begin(SERIAL_BAUD);
-  //  Serial.println("Canbus active");
+  delay(1000);
+  g_Lcd.setCursor(0,1);
+  LcdPrint_P(PSTR("Awaiting CAN...."));
 }
 
 void ServiceEncoder()
@@ -408,7 +437,19 @@ void ServiceEncoder()
 
   /* encoder button */
   if (btnstate != g_LastBtnState) {
-    if (btnstate) { // released
+      if (!g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
+	// can bus idle and backlight off
+	// turn it on for a few sec
+	g_CanBus.m_LastCanMsgRxMs = millis();
+	setBackLight(255);
+      }
+    if (
+#ifdef INVERT_ENC_BTN
+	!
+#endif
+	btnstate
+	) { // released
+
       if (g_CurScreenIdx == SCNIDX_DTE) {
         if (g_LeafCanData.m_CurDteType == 'L') g_LeafCanData.m_CurDteType = 'V';
         else if (g_LeafCanData.m_CurDteType == 'V') g_LeafCanData.m_CurDteType = 'T';
@@ -434,7 +475,8 @@ void loop()
 {
   ServiceEncoder();
 
-  if (!g_CanBus.Read()) {
+  uint8_t cbrc;
+  if (!(cbrc=g_CanBus.Read())) {
     if (!g_Brightness) {
       setBackLight(255);
     }
@@ -453,6 +495,26 @@ void loop()
     }
 
     uint8_t prc = g_LeafCanData.ProcessRxMsg(g_CanBus.GetMsgRx());
+#ifdef RLED_PIN
+    if (!prc && g_LeafCanData.DirtyBitsSet(DBF_PACK_AMPS)) {
+      if (g_LeafCanData.m_PackAmps < -4) { // consumption
+	// n.b. need to rewrite using DDRx instead
+	digitalWrite(RLED_PIN,LOW);
+	digitalWrite(GLED_PIN,HIGH);
+	digitalWrite(BLED_PIN,HIGH);
+      }
+      else if (g_LeafCanData.m_PackAmps > 4) { // regen
+	digitalWrite(RLED_PIN,HIGH);
+	digitalWrite(GLED_PIN,LOW);
+	digitalWrite(BLED_PIN,HIGH);
+      }
+      else { // idle
+	digitalWrite(RLED_PIN,HIGH);
+	digitalWrite(GLED_PIN,HIGH);
+	digitalWrite(BLED_PIN,LOW);
+      }
+    }
+#endif    
     if (!prc && ((millis()-g_LastScreenUpdateMs) > LCD_UPDATE_MS)) { // processed a message
       uint8_t src = DrawScreen();
       if (!src) {
@@ -483,6 +545,15 @@ void loop()
     }
 
     g_LeafCanData.ReqNext7BBFrame();
+  }
+  else {
+    if (cbrc > 1) { // timed out CAN read
+#ifdef BACKLIGHT_PIN
+    if (g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
+      setBackLight(0);
+    }
+#endif // BACKLIGHT_PIN
+    }
   }
 }
 

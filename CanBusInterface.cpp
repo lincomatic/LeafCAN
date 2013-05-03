@@ -62,21 +62,18 @@ void CanBusInterface::Init()
 uint8_t CanBusInterface::Read()
 {
   uint8_t canstat;
+  unsigned long start = millis();
   // --- Enable Rx
   while(CAN.cmd(&m_CanMsgRx) != CAN_CMD_ACCEPTED) {
-#ifdef BACKLIGHT_PIN
-    if (g_Brightness && ((millis()-m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
-      setBackLight(0);
+    if ((millis()-start) > CAN_READ_TIMEOUT) {
+      return 2;
     }
-#endif // BACKLIGHT_PIN
   }
   // --- Wait for Rx completed
   while((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED) {
-#ifdef BACKLIGHT_PIN
-    if (g_Brightness && ((millis()-m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
-      setBackLight(0);
+    if ((millis()-start) > CAN_READ_TIMEOUT) {
+      return 3;
     }
-#endif // BACKLIGHT_PIN
   }
 
   if (canstat == CAN_STATUS_ERROR) {
