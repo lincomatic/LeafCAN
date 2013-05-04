@@ -412,7 +412,7 @@ void setup()
   g_Lcd.setCursor(0,1);
   LcdPrint_P(PSTR("by Lincomatic"));
 
-//  g_CanBus.Init();
+  g_CanBus.Init();
   Serial.begin(SERIAL_BAUD);
   delay(1000);
   g_Lcd.setCursor(0,1);
