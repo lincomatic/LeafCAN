@@ -26,6 +26,7 @@
  * Boston, MA 02111-1307, USA.
  */
 #include <avr/pgmspace.h>
+#include <EEPROM.h>
 #include "LeafCAN.h"
 
 //
@@ -60,7 +61,6 @@ uint8_t g_Brightness = 0;
 
 unsigned long g_LastScreenUpdateMs=0;
 int8_t g_CurScreenIdx = SCNIDX_INFO;
-char g_TempUnit = 'C';
 
 #include "RotaryEncoder.h"
 RotaryEncoder g_RotEnc;
@@ -262,9 +262,9 @@ uint8_t BattTempScreen(uint8_t force)
 
   char line[17];
   g_Lcd.setCursor(0,0);
-  sprintf(line,"T1  T2  T3  T4 %c",g_TempUnit);
+  sprintf(line,"T1  T2  T3  T4 %c",g_LeafCanData.m_TempUnit);
   g_Lcd.print(line);
-  if (g_TempUnit == 'C') {
+  if (g_LeafCanData.m_TempUnit == 'C') {
   sprintf(line,"%2d  %2d  %2d  %2d",(int)g_LeafCanData.m_BattTemp1,(int)g_LeafCanData.m_BattTemp2,(int)g_LeafCanData.m_BattTemp3,(int)g_LeafCanData.m_BattTemp4);
   }
   else {
@@ -451,18 +451,15 @@ void ServiceEncoder()
 	) { // released
 
       if (g_CurScreenIdx == SCNIDX_DTE) {
-        if (g_LeafCanData.m_CurDteType == 'L') g_LeafCanData.m_CurDteType = 'V';
-        else if (g_LeafCanData.m_CurDteType == 'V') g_LeafCanData.m_CurDteType = 'T';
-        else g_LeafCanData.m_CurDteType = 'L';
+	char dt;
+        if (g_LeafCanData.m_CurDteType == 'L') dt = 'V';
+        else if (g_LeafCanData.m_CurDteType == 'V') dt = 'T';
+        else dt = 'L';
+	g_LeafCanData.SetDteType(dt);
         DrawScreen(1);
       }
       else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
-	if (g_TempUnit == 'C') {
-	  g_TempUnit = 'F';
-	}
-	else {
-	  g_TempUnit = 'C';
-	}
+	g_LeafCanData.SetTempUnit((g_LeafCanData.m_TempUnit == 'C') ? 'F' : 'C');
 	DrawScreen(1);
       }
     }
@@ -497,13 +494,13 @@ void loop()
     uint8_t prc = g_LeafCanData.ProcessRxMsg(g_CanBus.GetMsgRx());
 #ifdef RLED_PIN
     if (!prc && g_LeafCanData.DirtyBitsSet(DBF_PACK_AMPS)) {
-      if (g_LeafCanData.m_PackAmps < -4) { // consumption
+      if (g_LeafCanData.m_PackAmps < -6) { // consumption
 	// n.b. need to rewrite using DDRx instead
 	digitalWrite(RLED_PIN,LOW);
 	digitalWrite(GLED_PIN,HIGH);
 	digitalWrite(BLED_PIN,HIGH);
       }
-      else if (g_LeafCanData.m_PackAmps > 4) { // regen
+      else if (g_LeafCanData.m_PackAmps > 1) { // regen
 	digitalWrite(RLED_PIN,HIGH);
 	digitalWrite(GLED_PIN,LOW);
 	digitalWrite(BLED_PIN,HIGH);
@@ -550,6 +547,7 @@ void loop()
     if (cbrc > 1) { // timed out CAN read
 #ifdef BACKLIGHT_PIN
     if (g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
+      g_LeafCanData.SaveEEPROM();
       setBackLight(0);
     }
 #endif // BACKLIGHT_PIN

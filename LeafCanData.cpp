@@ -22,12 +22,13 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#include <EEPROM.h>
 #include "LeafCAN.h"
 
 LeafCanData::LeafCanData()
 {
-  /*
   m_DirtyBits = 0;
+  /*
   m_PackVolts = 0;
   m_PackAmps = 0;
   m_W = 0;
@@ -56,7 +57,10 @@ LeafCanData::LeafCanData()
   // startup settings
   m_DpKWh10_Low = DEF_DPKWH10_LOW; // lowest dist/KWh * 10;
   m_DpKWh10_Incr = DEF_DPKWH10_INCR; // DpKWh10 increment 
-  m_CurDteType = 'V';
+  m_CurDteType = EEPROM.read(EOFS_DTE_TYPE);
+  if (m_CurDteType == 0xff) m_CurDteType = DEFAULT_DTE_TYPE;
+  m_TempUnit = EEPROM.read(EOFS_TEMP_UNIT);
+  if (m_TempUnit == 0xff) m_TempUnit = DEFAULT_TEMP_UNIT;
 }
 
 // return = 0 = processed a CAN msg
@@ -290,4 +294,13 @@ uint8_t LeafCanData::Process7BBFrame(uint8_t *candata)
   }
 
   return 0;
+}
+
+void LeafCanData::SaveEEPROM()
+{
+  if (DirtyBitsSet(DBF_EEPROM)) {
+    ClearDirtyBits(DBF_EEPROM);
+    EEPROM.write(EOFS_DTE_TYPE,m_CurDteType);
+    EEPROM.write(EOFS_TEMP_UNIT,m_TempUnit);
+  }
 }

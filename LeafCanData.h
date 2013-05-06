@@ -38,6 +38,8 @@
 #define DBF_SOC_CAP    0x0200
 #define DBF_CP_VOLTS   0x0400
 
+#define DBF_EEPROM 0x8000 // special dirty bit to force EEPROM save
+
 class LeafCanData {
   uint16_t m_DirtyBits;
 public:
@@ -73,6 +75,7 @@ public:
   int32_t m_DpKWh10_Low; // lowest dist/KWh * 10 for DTE
   int32_t m_DpKWh10_Incr; // DpKWh10 increment for DTE
   char m_CurDteType; // 'L'=lb,'V'=vlb,'T'=turtle
+  char m_TempUnit; // 'C'/'F'
 
   
   LeafCanData();
@@ -85,6 +88,9 @@ public:
   uint16_t DirtyBitsSet(uint16_t bits) {
     return m_DirtyBits & bits;
   }
+  void SetTempUnit(char t) { m_TempUnit = t;SetDirtyBits(DBF_EEPROM); }
+  void SetDteType(char t) { m_CurDteType = t;SetDirtyBits(DBF_EEPROM); }
+  void SaveEEPROM();
 
   uint8_t ProcessRxMsg(st_cmd_t *rxmsg);
   uint8_t Process7BBFrame(uint8_t *candata);

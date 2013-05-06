@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0A2"
+#define VER_STR "v2.0A3"
 
 //
 // configuration
@@ -114,6 +114,9 @@
 
 #define CAN_READ_TIMEOUT 250 // ms - assume CAN bus is off when exceeded
 
+#define DEFAULT_TEMP_UNIT 'C'
+#define DEFAULT_DTE_TYPE  'V'
+
 //
 // constants
 //
@@ -121,6 +124,10 @@
 #define GIDS_LB  49 // low batt
 #define GIDS_VLB 24 // very low batt
 #define GIDS_TURTLE 6 // really varies from 4-6 ...
+
+// EEPROM offsets
+#define EOFS_TEMP_UNIT 0 // C/F
+#define EOFS_DTE_TYPE  1 // L/V/T
 
 
 
