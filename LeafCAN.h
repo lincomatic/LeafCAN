@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0A3"
+#define VER_STR "v2.0B0"
 
 //
 // configuration
@@ -38,18 +38,21 @@
 // in LeafCAN.pde if ADA_OLED is defined
 #define ADA_OLED
 
+// Barbouri's V2oled3 board with RGB LED encoder
+// comment this out for V2 hardware
 #define V2O3
-#define V2 // v2 hardware
 //#define BREADBOARD // don't use - lincomatic's test rig
 
 #ifdef BREADBOARD
-#define I2CLCD
+#define I2CLCD // adafruit I2C LCD backpack
 #endif
 
-#ifdef V2
+//#define SERIAL // serial logging
+
+#ifndef ADA_OLED
 #define BACKLIGHT_PIN 15 // PB7
 #define CONTRAST_PIN 36 // PE4
-#endif // V2
+#endif 
 
 #ifdef V2O3
 #define INVERT_ENC_BTN
@@ -61,9 +64,7 @@
 #define BACKLIGHT_TIMEOUT 5000 // turn off backlight after CAN bus idle for (ms)
 #define SERIAL_BAUD 115200
 #define LCD_UPDATE_MS 250 // update interval for LCD in ms
-#define SOCPCT_55B // show "true" SOC% from 55B message
-#define SHOW_KWH // show remaining pack KWh in line 1
-#define SHOW_KW // show KW usage on line 2
+
 // the Leaf's fuel bar display isn't tied to SOC, which I find very confusing,
 // because this means that as the battery ages or temperature changes, the bars
 // correspond to less
@@ -76,7 +77,8 @@
 // look directly at the raw Gid/SOC values.
 // the fuel bars are displayed w/ 1 decimal place (e.g 9.2) so you always know
 // how "full" the current bar is
-//#define FIXED_FUEL_BARS
+//n.b. FIXED_FUEL_BARS is no longer a #define. It's always enabled
+//     but m_GOMFuelBars is available for use in Screen() functions
 
 /*
  rotary encoder configuration.
@@ -110,9 +112,10 @@
 #define SCNIDX_SOC_CAP 5
 #define SCREEN_CNT 6
 
+#define CAN_REQ_INTERVAL 1000 // # ms between active CAN requests
 #define REQ_INTERVAL_7BB 20 // # ms between 7BB requests
 
-#define CAN_READ_TIMEOUT 250 // ms - assume CAN bus is off when exceeded
+#define CAN_TIMEOUT 500 // ms - assume CAN bus is off when exceeded
 
 #define DEFAULT_TEMP_UNIT 'C'
 #define DEFAULT_DTE_TYPE  'V'

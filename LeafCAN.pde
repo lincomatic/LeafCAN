@@ -55,9 +55,7 @@ uint8_t g_LogEnabled = 0;
 uint8_t g_LogOnly = 0;
 uint8_t g_LcdEnabled = 1;
 
-#ifdef BACKLIGHT_PIN
 uint8_t g_Brightness = 0;
-#endif // BACKLIGHT_PIN
 
 unsigned long g_LastScreenUpdateMs=0;
 int8_t g_CurScreenIdx = SCNIDX_INFO;
@@ -196,8 +194,8 @@ uint8_t DTEScreen(uint8_t force)
     g_LeafCanData.ClearDirtyBits(DBF_WH_REMAINING);
 
     int32_t whmin;
-    if (g_LeafCanData.m_CurDteType == 'L') whmin = g_LeafCanData.m_WhL;
-    else if (g_LeafCanData.m_CurDteType == 'V') whmin = g_LeafCanData.m_WhV;
+    if (g_LeafCanData.m_CurDteType == DTE_TYPE_LB) whmin = g_LeafCanData.m_WhL;
+    else if (g_LeafCanData.m_CurDteType == DTE_TYPE_VLB) whmin = g_LeafCanData.m_WhV;
     else whmin = g_LeafCanData.m_WhT; 
     int32_t wh = g_LeafCanData.m_Wh;
     int32_t dpkw100 = g_LeafCanData.m_DpKWh10_Low;
@@ -347,22 +345,19 @@ uint8_t DrawScreen(uint8_t force=0)
 }
 
 
-#ifdef BACKLIGHT_PIN
 //0=off 255=max bright
 void setBackLight(uint8_t brightness)
 {
-#ifdef ADA_OLED
-  if (brightness) g_Lcd.display();
-  else g_Lcd.noDisplay();
-#else
+#ifdef BACKLIGHT_PIN
   //  analogWrite(BACKLIGHT_PIN,brightness);
   digitalWrite(BACKLIGHT_PIN,brightness ? HIGH : LOW);
+#else
+  if (brightness) g_Lcd.display();
+  else g_Lcd.noDisplay();
 #endif
 
   g_Brightness = brightness;
 }
-
-#endif // BACKLIGHT_PIN
 
 #ifdef CONTRAST_PIN
 //0=low 255=max 
@@ -371,7 +366,6 @@ void setContrast(uint8_t contrast)
   analogWrite(CONTRAST_PIN,contrast);
 }
 #endif // CONTRAST_PIN
-
 
 void setup()   
 {
@@ -395,8 +389,8 @@ void setup()
 
 #ifdef BACKLIGHT_PIN
   pinMode(BACKLIGHT_PIN,OUTPUT);
-  setBackLight(255);
 #endif
+  setBackLight(255);
 #ifdef CONTRAST_PIN
   pinMode(CONTRAST_PIN,OUTPUT);
   setContrast(255);
@@ -411,12 +405,14 @@ void setup()
   g_Lcd.print(VER_STR);
   g_Lcd.setCursor(0,1);
   LcdPrint_P(PSTR("by Lincomatic"));
-
-  g_CanBus.Init();
-  Serial.begin(SERIAL_BAUD);
   delay(1000);
   g_Lcd.setCursor(0,1);
   LcdPrint_P(PSTR("Awaiting CAN...."));
+
+  g_CanBus.Init();
+#ifdef SERIAL
+  Serial.begin(SERIAL_BAUD);
+#endif
 }
 
 void ServiceEncoder()
@@ -452,14 +448,14 @@ void ServiceEncoder()
 
       if (g_CurScreenIdx == SCNIDX_DTE) {
 	char dt;
-        if (g_LeafCanData.m_CurDteType == 'L') dt = 'V';
-        else if (g_LeafCanData.m_CurDteType == 'V') dt = 'T';
-        else dt = 'L';
+        if (g_LeafCanData.m_CurDteType == DTE_TYPE_LB) dt = DTE_TYPE_VLB;
+        else if (g_LeafCanData.m_CurDteType == DTE_TYPE_VLB) dt = DTE_TYPE_TURTLE;
+        else dt = DTE_TYPE_LB;
 	g_LeafCanData.SetDteType(dt);
         DrawScreen(1);
       }
       else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
-	g_LeafCanData.SetTempUnit((g_LeafCanData.m_TempUnit == 'C') ? 'F' : 'C');
+	g_LeafCanData.SetTempUnit((g_LeafCanData.m_TempUnit == TEMP_UNIT_C) ? TEMP_UNIT_F : TEMP_UNIT_C);
 	DrawScreen(1);
       }
     }
@@ -478,6 +474,7 @@ void loop()
       setBackLight(255);
     }
 
+#ifdef SERIAL
     if (g_LogEnabled) {
       st_cmd_t *rxmsg = g_CanBus.GetMsgRx();
       uint8_t msg[11];
@@ -490,6 +487,7 @@ void loop()
 	msg[3+i] = 0xff;
       Serial.write(msg,sizeof(msg));
     }
+#endif // SERIAL
 
     uint8_t prc = g_LeafCanData.ProcessRxMsg(g_CanBus.GetMsgRx());
 #ifdef RLED_PIN
@@ -511,16 +509,16 @@ void loop()
 	digitalWrite(BLED_PIN,LOW);
       }
     }
-#endif    
-    if (!prc && ((millis()-g_LastScreenUpdateMs) > LCD_UPDATE_MS)) { // processed a message
+#endif  
+    unsigned long ms = millis();
+    if (!prc && ((ms - g_LastScreenUpdateMs) > LCD_UPDATE_MS)) { // processed a message
       uint8_t src = DrawScreen();
       if (!src) {
-	g_LastScreenUpdateMs = millis();
+	g_LastScreenUpdateMs = ms;
       }
     }
 
-    if (
-        ((millis()-g_LeafCanData.m_Last7BBreqTime) > 1000)) {
+    if ((ms-g_LeafCanData.m_Last7BBreqTime) > CAN_REQ_INTERVAL) {
       uint8_t group;
       switch(g_CurScreenIdx) {
       case SCNIDX_SOC_CAP:
@@ -535,22 +533,46 @@ void loop()
       default:
 	group = 255;
       }
-
+      
       if (group != 255) {
 	g_LeafCanData.Req79B(group);
       }
     }
 
     g_LeafCanData.ReqNext7BBFrame();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   }
   else {
     if (cbrc > 1) { // timed out CAN read
-#ifdef BACKLIGHT_PIN
-    if (g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
-      g_LeafCanData.SaveEEPROM();
-      setBackLight(0);
-    }
-#endif // BACKLIGHT_PIN
+      if (g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
+	g_LeafCanData.SaveEEPROM();
+	setBackLight(0);
+	digitalWrite(RLED_PIN,HIGH); // turn off
+	digitalWrite(GLED_PIN,HIGH); // turn off
+	digitalWrite(BLED_PIN,HIGH); // turn off
+      }
     }
   }
 }

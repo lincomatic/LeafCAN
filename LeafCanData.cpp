@@ -58,9 +58,9 @@ LeafCanData::LeafCanData()
   m_DpKWh10_Low = DEF_DPKWH10_LOW; // lowest dist/KWh * 10;
   m_DpKWh10_Incr = DEF_DPKWH10_INCR; // DpKWh10 increment 
   m_CurDteType = EEPROM.read(EOFS_DTE_TYPE);
-  if (m_CurDteType == 0xff) m_CurDteType = DEFAULT_DTE_TYPE;
+  if (!IsValidDteType(m_CurDteType)) m_CurDteType = DEFAULT_DTE_TYPE;
   m_TempUnit = EEPROM.read(EOFS_TEMP_UNIT);
-  if (m_TempUnit == 0xff) m_TempUnit = DEFAULT_TEMP_UNIT;
+  if (!IsValidTempUnit(m_TempUnit)) m_TempUnit = DEFAULT_TEMP_UNIT;
 }
 
 // return = 0 = processed a CAN msg
@@ -148,7 +148,7 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
 }
 
 // group = 255 requests next msg in current group
-void LeafCanData::Req79B(uint8_t group)
+uint8_t LeafCanData::Req79B(uint8_t group)
 {
   st_cmd_t *txmsg = g_CanBus.GetMsgTx();
   uint8_t *candata = txmsg->pt_data;
@@ -196,11 +196,17 @@ void LeafCanData::Req79B(uint8_t group)
   candata[6] = 0xff;
   candata[7] = 0xff;
 
-  g_CanBus.Write();
-  m_Last7BBreqTime = millis();
 #ifdef SDBG
   Serial.print("group: ");Serial.print(group,DEC);Serial.print(" framecnt: ");Serial.print(m_Cur7BBFrameCnt,DEC);
 #endif
+
+  if (!g_CanBus.Write()) {
+    m_Last7BBreqTime = millis();
+    return 0;
+  }
+  else {
+    return 1;
+  }
 }
 
 uint8_t LeafCanData::ReqNext7BBFrame()
@@ -208,8 +214,9 @@ uint8_t LeafCanData::ReqNext7BBFrame()
   if ((m_Cur7BBReqFrameIdx < m_Cur7BBFrameCnt) &&
       m_Cur7BBRcvFrameIdx &&
       ((millis()-m_Last7BBreqTime) >= REQ_INTERVAL_7BB)) {
-    Req79B(255); // req next 7BB msg
-    m_Cur7BBReqFrameIdx++;
+    if (!Req79B(255)) {// req next 7BB msg
+      m_Cur7BBReqFrameIdx++;
+    }
   }
 }
 

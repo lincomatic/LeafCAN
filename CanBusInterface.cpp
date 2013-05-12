@@ -37,6 +37,7 @@ CanBusInterface::CanBusInterface()
 
 void CanBusInterface::Init()
 {
+  m_LastReadStat = 0;
   // Clock prescaler Reset SCL:don't need this unless CLKDIV8 is set in the low fuse
   // CLKPR = 0x80;  CLKPR = 0x00;
 
@@ -63,23 +64,30 @@ uint8_t CanBusInterface::Read()
 {
   uint8_t canstat;
   unsigned long start = millis();
-  // --- Enable Rx
-  while(CAN.cmd(&m_CanMsgRx) != CAN_CMD_ACCEPTED) {
-    if ((millis()-start) > CAN_READ_TIMEOUT) {
-      return 2;
+  if (m_LastReadStat != 3) {
+    // --- Enable Rx
+    while(CAN.cmd(&m_CanMsgRx) != CAN_CMD_ACCEPTED) {
+      if ((millis()-start) > CAN_TIMEOUT) {
+	m_LastReadStat = 2;
+	return 2;
+      }
     }
   }
+
   // --- Wait for Rx completed
   while((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED) {
-    if ((millis()-start) > CAN_READ_TIMEOUT) {
+    if ((millis()-start) > CAN_TIMEOUT) {
+      m_LastReadStat = 3;
       return 3;
     }
   }
 
   if (canstat == CAN_STATUS_ERROR) {
+    m_LastReadStat = 1;
     return 1;
   }
   else {
+    m_LastReadStat = 0;
     m_LastCanMsgRxMs = millis();
     return 0;
   }
@@ -89,11 +97,20 @@ uint8_t CanBusInterface::Read()
 uint8_t CanBusInterface::Write()
 {
   uint8_t canstat;
+  unsigned long start = millis();
 
-  while(CAN.cmd(&m_CanMsgTx) != CAN_CMD_ACCEPTED);
+  while (CAN.cmd(&m_CanMsgTx) != CAN_CMD_ACCEPTED) {
+    if ((millis()-start) > CAN_TIMEOUT) {
+      return 2;
+    }
+  }
 
   // --- Wait for Tx completed
-  while((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED);
+  while ((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED) {
+    if ((millis()-start) > CAN_TIMEOUT) {
+      return 3;
+    }
+  }
 
   if (canstat == CAN_STATUS_ERROR) {
     return 1;

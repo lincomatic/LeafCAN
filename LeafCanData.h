@@ -40,6 +40,26 @@
 
 #define DBF_EEPROM 0x8000 // special dirty bit to force EEPROM save
 
+// m_CurDteType
+#define DTE_TYPE_LB 'L'
+#define DTE_TYPE_VLB 'V'
+#define DTE_TYPE_TURTLE 'T'
+
+inline uint8_t IsValidDteType(char t)
+{
+  if ((t == DTE_TYPE_LB) || (t == DTE_TYPE_VLB) || (t == DTE_TYPE_TURTLE)) return 1;
+  else return 0;
+}
+
+// m_TempUnit
+#define TEMP_UNIT_C 'C'
+#define TEMP_UNIT_F 'F'
+inline uint8_t IsValidTempUnit(char u)
+{
+  if ((u == TEMP_UNIT_C) || (u == TEMP_UNIT_F)) return 1;
+  else return 0;
+}
+
 class LeafCanData {
   uint16_t m_DirtyBits;
 public:
@@ -72,10 +92,10 @@ public:
   int32_t m_WhT; // Wh left @ Turtle
 
   // settings
-  int32_t m_DpKWh10_Low; // lowest dist/KWh * 10 for DTE
+  int32_t m_DpKWh10_Low; // lowest dist/KWh * 10 for DTEt
   int32_t m_DpKWh10_Incr; // DpKWh10 increment for DTE
-  char m_CurDteType; // 'L'=lb,'V'=vlb,'T'=turtle
-  char m_TempUnit; // 'C'/'F'
+  char m_CurDteType; // DTE_TYPE_xxx
+  char m_TempUnit; // TEMP_UNIT_x
 
   
   LeafCanData();
@@ -94,7 +114,7 @@ public:
 
   uint8_t ProcessRxMsg(st_cmd_t *rxmsg);
   uint8_t Process7BBFrame(uint8_t *candata);
-  void Req79B(uint8_t group);
+  uint8_t Req79B(uint8_t group);
   uint8_t ReqNext7BBFrame();
 };
 
