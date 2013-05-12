@@ -569,9 +569,11 @@ void loop()
       if (g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
 	g_LeafCanData.SaveEEPROM();
 	setBackLight(0);
+#ifdef RLED_PIN
 	digitalWrite(RLED_PIN,HIGH); // turn off
 	digitalWrite(GLED_PIN,HIGH); // turn off
 	digitalWrite(BLED_PIN,HIGH); // turn off
+#endif
       }
     }
   }

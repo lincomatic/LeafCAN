@@ -40,7 +40,7 @@
 
 // Barbouri's V2oled3 board with RGB LED encoder
 // comment this out for V2 hardware
-#define V2O3
+//#define V2O3
 //#define BREADBOARD // don't use - lincomatic's test rig
 
 #ifdef BREADBOARD
