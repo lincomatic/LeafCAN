@@ -119,7 +119,7 @@ uint8_t LeafCanData::ProcessRxMsg(st_cmd_t *rxmsg)
   }
   else if (rxmsg->id.std == 0x5bc)  {
     uint16_t gids = (candata[0] << 2) | (candata[1] >> 6);
-    if (gids != m_Gids) {
+    if ((gids < 1023) && (gids != m_Gids)) {
       SetDirtyBits(DBF_GIDS|DBF_WH_REMAINING|DBF_FIXED_FUEL_BARS);
       m_Gids = gids;
       m_Wh = ((((int32_t)m_Gids) * KW_FACTOR)+50L) / 100L;

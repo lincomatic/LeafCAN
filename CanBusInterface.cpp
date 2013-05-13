@@ -64,7 +64,12 @@ uint8_t CanBusInterface::Read()
 {
   uint8_t canstat;
   unsigned long start = millis();
-  if (m_LastReadStat != 3) {
+  uint8_t dumpit;
+  if (m_LastReadStat == 3) {
+    dumpit = 1;
+  }
+  else {
+    dumpit = 0;
     // --- Enable Rx
     while(CAN.cmd(&m_CanMsgRx) != CAN_CMD_ACCEPTED) {
       if ((millis()-start) > CAN_TIMEOUT) {
@@ -76,13 +81,13 @@ uint8_t CanBusInterface::Read()
 
   // --- Wait for Rx completed
   while((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED) {
-    if ((millis()-start) > CAN_TIMEOUT) {
+    if ((m_LastReadStat == 3) || ((millis()-start) > CAN_TIMEOUT)) { // don't loop here if already timed out so we don't block encoder
       m_LastReadStat = 3;
       return 3;
     }
   }
 
-  if (canstat == CAN_STATUS_ERROR) {
+  if (dumpit || (canstat == CAN_STATUS_ERROR)) {
     m_LastReadStat = 1;
     return 1;
   }

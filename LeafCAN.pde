@@ -138,7 +138,7 @@ uint8_t InfoScreen(uint8_t force)
     g_Lcd.print(line);
   }
   // bottom line: volts soc kw
-  if (g_LeafCanData.DirtyBitsSet(DBF_PACK_VOLTS|DBF_SOC|DBF_WATTS)) {
+ if (force || g_LeafCanData.DirtyBitsSet(DBF_PACK_VOLTS|DBF_SOC|DBF_WATTS)) {
     rc = 0;
     g_LeafCanData.ClearDirtyBits(DBF_PACK_VOLTS|DBF_SOC|DBF_WATTS);
 
