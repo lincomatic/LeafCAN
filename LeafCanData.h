@@ -25,6 +25,10 @@
 #ifndef _LEAFCANDATA_H_
 #define _LEAFCANDATA_H_
 
+// fake request group for getting subsequent frames
+#define REQ_GROUP_NEXT_FRAME 255
+#define REQ_GROUP_INVALID    254
+
 // dirty bits
 #define DBF_PACK_VOLTS 0x0001
 #define DBF_PACK_AMPS  0x0002

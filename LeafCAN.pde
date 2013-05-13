@@ -405,9 +405,9 @@ void setup()
   g_Lcd.print(VER_STR);
   g_Lcd.setCursor(0,1);
   LcdPrint_P(PSTR("by Lincomatic"));
-  delay(1000);
-  g_Lcd.setCursor(0,1);
-  LcdPrint_P(PSTR("Awaiting CAN...."));
+//  delay(2000);
+//  g_Lcd.setCursor(0,1);
+//  LcdPrint_P(PSTR("Awaiting CAN...."));
 
   g_CanBus.Init();
 #ifdef SERIAL
@@ -531,38 +531,15 @@ void loop()
 	group = 4;
 	break;
       default:
-	group = 255;
+	group = REQ_GROUP_INVALID;
       }
       
-      if (group != 255) {
+      if (group != REQ_GROUP_INVALID) {
 	g_LeafCanData.Req79B(group);
       }
     }
 
     g_LeafCanData.ReqNext7BBFrame();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   }
   else {
     if (cbrc > 1) { // timed out CAN read

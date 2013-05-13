@@ -157,7 +157,7 @@ uint8_t LeafCanData::Req79B(uint8_t group)
   txmsg->ctrl.ide = 0; // CAN 2.0A
   txmsg->id.std = 0x79b;
   txmsg->dlc = 8;
-  if (group != 255) {
+  if (group != REQ_GROUP_NEXT_FRAME) {
     candata[0] = 0x02;
     candata[1] = 0x21;
     candata[2] = group;
@@ -185,7 +185,7 @@ uint8_t LeafCanData::Req79B(uint8_t group)
     m_Cur7BBRcvFrameIdx = 0;
     m_Cur7BBReqFrameIdx = 1;
   }
-  else { // 255 - req next msg
+  else { // REQ_GROUP_NEXT_FRAME - req next msg
     candata[0] = 0x30;
     candata[1] = 0x01;
     candata[2] = 0x00;
@@ -211,10 +211,9 @@ uint8_t LeafCanData::Req79B(uint8_t group)
 
 uint8_t LeafCanData::ReqNext7BBFrame()
 {
-  if ((m_Cur7BBReqFrameIdx < m_Cur7BBFrameCnt) &&
-      m_Cur7BBRcvFrameIdx &&
+  if (m_Cur7BBRcvFrameIdx && (m_Cur7BBReqFrameIdx < m_Cur7BBFrameCnt) &&
       ((millis()-m_Last7BBreqTime) >= REQ_INTERVAL_7BB)) {
-    if (!Req79B(255)) {// req next 7BB msg
+    if (!Req79B(REQ_GROUP_NEXT_FRAME)) {// req next 7BB msg
       m_Cur7BBReqFrameIdx++;
     }
   }
