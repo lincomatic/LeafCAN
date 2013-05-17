@@ -433,13 +433,13 @@ void ServiceEncoder()
 
   /* encoder button */
   if (btnstate != g_LastBtnState) {
-      if (!g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
-	// can bus idle and backlight off
-	// turn it on for a few sec
-	g_CanBus.m_LastCanMsgRxMs = millis();
-	setBackLight(255);
-      }
-    if (
+    if (!g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
+      // can bus idle and backlight off
+      // turn it on for a few sec
+      g_CanBus.m_LastCanMsgRxMs = millis();
+      setBackLight(255);
+    }
+    else if (
 #ifdef INVERT_ENC_BTN
 	!
 #endif

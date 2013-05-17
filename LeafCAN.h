@@ -61,7 +61,7 @@
 #define RLED_PIN 21 // PC5
 #endif
 
-#define BACKLIGHT_TIMEOUT 5000 // turn off backlight after CAN bus idle for (ms)
+#define BACKLIGHT_TIMEOUT 15000 // turn off backlight after CAN bus idle for (ms)
 #define SERIAL_BAUD 115200
 #define LCD_UPDATE_MS 250 // update interval for LCD in ms
 
