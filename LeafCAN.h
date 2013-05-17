@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0B1"
+#define VER_STR "v2.0B2"
 
 //
 // configuration
@@ -61,7 +61,7 @@
 #define RLED_PIN 21 // PC5
 #endif
 
-#define BACKLIGHT_TIMEOUT 15000 // turn off backlight after CAN bus idle for (ms)
+#define BACKLIGHT_TIMEOUT 30000 // turn off backlight after CAN bus idle for (ms)
 #define SERIAL_BAUD 115200
 #define LCD_UPDATE_MS 250 // update interval for LCD in ms
 
@@ -112,7 +112,7 @@
 #define SCNIDX_SOC_CAP 5
 #define SCREEN_CNT 6
 
-#define CAN_REQ_INTERVAL 750 // # ms between active CAN requests must be > REQ_INTERVAL_7BB
+#define CAN_REQ_INTERVAL 500 // # ms between active CAN requests must be > REQ_INTERVAL_7BB
 #define REQ_INTERVAL_7BB 20 // # ms between 7BB requests
 
 #define CAN_TIMEOUT 500 // ms - assume CAN bus is off when exceeded
