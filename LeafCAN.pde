@@ -449,30 +449,31 @@ void ServiceEncoder()
 
   /* encoder button */
   if (btnstate != g_LastBtnState) {
-    if (!g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
-      // can bus idle and backlight off
-      // turn it on for a few sec
-      g_CanBus.m_LastCanMsgRxMs = millis();
-      setBackLight(255);
-    }
-    else if (
+    if (
 #ifdef INVERT_ENC_BTN
 	!
 #endif
 	btnstate
 	) { // released
-
-      if (g_CurScreenIdx == SCNIDX_DTE) {
-	char dt;
-        if (g_LeafCanData.m_CurDteType == DTE_TYPE_LB) dt = DTE_TYPE_VLB;
-        else if (g_LeafCanData.m_CurDteType == DTE_TYPE_VLB) dt = DTE_TYPE_TURTLE;
-        else dt = DTE_TYPE_LB;
-	g_LeafCanData.SetDteType(dt);
-        DrawScreen(1);
+      if (!g_Brightness && ((millis()-g_CanBus.m_LastCanMsgRxMs) >= BACKLIGHT_TIMEOUT)) {
+	// can bus idle and backlight off
+	// turn it on for a few sec
+	g_CanBus.m_LastCanMsgRxMs = millis();
+	setBackLight(255);
       }
-      else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
-	g_LeafCanData.SetTempUnit((g_LeafCanData.m_TempUnit == TEMP_UNIT_C) ? TEMP_UNIT_F : TEMP_UNIT_C);
-	DrawScreen(1);
+      else {
+	if (g_CurScreenIdx == SCNIDX_DTE) {
+	  char dt;
+	  if (g_LeafCanData.m_CurDteType == DTE_TYPE_LB) dt = DTE_TYPE_VLB;
+	  else if (g_LeafCanData.m_CurDteType == DTE_TYPE_VLB) dt = DTE_TYPE_TURTLE;
+	  else dt = DTE_TYPE_LB;
+	  g_LeafCanData.SetDteType(dt);
+	  DrawScreen(1);
+	}
+	else if (g_CurScreenIdx == SCNIDX_BATT_TEMP) {
+	  g_LeafCanData.SetTempUnit((g_LeafCanData.m_TempUnit == TEMP_UNIT_C) ? TEMP_UNIT_F : TEMP_UNIT_C);
+	  DrawScreen(1);
+	}
       }
     }
     //    Serial.println(btnstate ? "btnrelease" : "btnpress");
