@@ -77,26 +77,42 @@ void LcdPrint_P(const prog_char *s)
 // print 2-digit number 100 = A0, 113 = B3, etc
 char *SPrintDist(int dist,char *buf)
 {
-  int i=dist/10;
-  if (i == 0) {
-    buf[0] = ' ';
-  }
-  else if (i > 9) {
-    buf[0] = 'A' + (i-10);
+  int i;
+  if (dist < 0) {
+    buf[0] = '.';
+    buf[1] = '0' - dist;
   }
   else {
-    buf[0] = i + '0';
+    i=dist/10;
+    if (i == 0) {
+      buf[0] = ' ';
+    }
+    else if (i > 9) {
+      buf[0] = 'A' + (i-10);
+    }
+    else {
+      buf[0] = i + '0';
+    }
+    buf[1] = (dist % 10) + '0';
   }
-  buf[1] = (dist % 10) + '0';
   buf[2] = 0;
   return buf;
 }
 
 // distPerKwhx10 = dist/KWh * 10
 // returns distance to whMin
+// if return value is negative, it's multipied by 10 (meaning it's < 1)
 int DistRem(int32_t whRem,int32_t whMin,int distPerKwhx10)
 {
-  return (int)((((whRem-whMin)*((int32_t)distPerKwhx10))+5000L)/10000);
+  int32_t t = (whRem-whMin)*((int32_t)distPerKwhx10);
+  int32_t drem = (t+5000L)/10000;
+  if (drem <= 1) {
+    int32_t drem10 = (t+500L)/1000; /// distrem * 10
+    if (drem10 < 10) {
+      drem = -drem10;
+    }
+  }
+  return (int) drem;
 }
 
 

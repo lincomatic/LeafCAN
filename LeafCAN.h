@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0B2"
+#define VER_STR "v2.0B3"
 
 //
 // configuration
