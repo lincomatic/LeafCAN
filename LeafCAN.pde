@@ -104,12 +104,15 @@ char *SPrintDist(int dist,char *buf)
 // if return value is negative, it's multipied by 10 (meaning it's < 1)
 int DistRem(int32_t whRem,int32_t whMin,int distPerKwhx10)
 {
-  int32_t t = (whRem-whMin)*((int32_t)distPerKwhx10);
-  int32_t drem = (t+5000L)/10000;
-  if (drem <= 1) {
-    int32_t drem10 = (t+500L)/1000; /// distrem * 10
-    if (drem10 < 10) {
-      drem = -drem10;
+  if (whRem < whMin) return 0;
+  else {
+    int32_t t = (whRem-whMin)*((int32_t)distPerKwhx10);
+    int32_t drem = (t+5000L)/10000;
+    if (drem <= 1) {
+      int32_t drem10 = (t+500L)/1000; /// distrem * 10
+      if (drem10 < 10) {
+	drem = -drem10;
+      }
     }
   }
   return (int) drem;
