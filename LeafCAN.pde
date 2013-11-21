@@ -114,8 +114,8 @@ int DistRem(int32_t whRem,int32_t whMin,int distPerKwhx10)
 	drem = -drem10;
       }
     }
+    return (int) drem;
   }
-  return (int) drem;
 }
 
 
