@@ -2,7 +2,7 @@
 /*
  * LeafCAN Firmware
  *
- * Copyright (c) 2012-2013 Sam C. Lin <lincomatic@gmail.com>
+ * Copyright (c) 2012-2013 Sam C. Lin <lincomatic@hotmail.com>
  * Maintainer: SCL
 
  * This file is part of LeafCAN

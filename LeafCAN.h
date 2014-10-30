@@ -2,7 +2,7 @@
 /*
  * LeafCAN Firmware
  *
- * Copyright (c) 2012-2013 Sam C. Lin <lincomatic@gmail.com>
+ * Copyright (c) 2012-2014 Sam C. Lin <lincomatic@hotmail.com>
  * Maintainer: SCL
 
  * This file is part of LeafCAN
@@ -25,7 +25,7 @@
 #ifndef _LEAFCAN_H_
 #define _LEAFCAN_H_
 
-#define VER_STR "v2.0B3"
+#define VER_STR "v2.01"
 
 //
 // configuration
@@ -33,10 +33,7 @@
 
 // support Adafruit 16x2 OLED display http://www.adafruit.com/products/823
 // requires Adafruit's library: https://github.com/ladyada/Adafruit_CharacterOLED
-// due to a bug in Arduino, you must uncomment
-//  //#include <Adafruit_CharacterOLED.h>
-// in LeafCAN.pde if ADA_OLED is defined
-#define ADA_OLED
+//#define ADA_OLED
 
 // Barbouri's V2oled3 board with RGB LED encoder
 // comment this out for V2 hardware
@@ -55,6 +52,8 @@
 #endif 
 
 #ifdef V2O3
+#undef CONTRAST_PIN
+#define DISP_RW_PIN 39 //PE7
 #define INVERT_ENC_BTN
 #define GLED_PIN 19 // PC3
 #define BLED_PIN 20 // PC4

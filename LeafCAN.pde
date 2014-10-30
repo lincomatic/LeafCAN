@@ -5,7 +5,7 @@
 
  * LeafCAN Firmware
  *
- * Copyright (c) 2012-2013 Sam C. Lin <lincomatic@gmail.com>
+ * Copyright (c) 2012-2014 Sam C. Lin <lincomatic@hotmail.com>
  * Maintainer: SCL
 
  * This file is part of LeafCAN
@@ -39,7 +39,7 @@ CanBusInterface g_CanBus;
 #ifdef ADA_OLED
 // rs/rw/enable/d4/d5/d6/d7
 #include <Adafruit_CharacterOLED.h>
-Adafruit_CharacterOLED g_Lcd(37,39,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
+Adafruit_CharacterOLED g_Lcd(37,DISP_RW_PIN,38,11,12,13,14); // PE5/PE7/PE6/PB3/PB4/PB5/PB6
 #elif defined(BREADBOARD)
 #include <Wire.h>
 #include <LiquidTWI2.h>
@@ -388,6 +388,20 @@ void setContrast(uint8_t contrast)
 
 void setup()   
 {
+#if defined(DISP_RW_PIN) && !defined(ADA_OLED)
+// for V203 board with LCD only ... RW pin needs to be pulled low
+// for LCD, since it isn't pulled low by hardware.
+  pinMode(DISP_RW_PIN,OUTPUT);
+  digitalWrite(DISP_RW_PIN,LOW);
+#endif
+  
+  g_Lcd.begin(16,2);
+  g_Lcd.setCursor(0,0);
+  LcdPrint_P(PSTR("LeafCAN "));
+  g_Lcd.print(VER_STR);
+  g_Lcd.setCursor(0,1);
+  LcdPrint_P(PSTR("by Lincomatic"));
+
 #ifdef RLED_PIN
   pinMode(RLED_PIN,OUTPUT);
   digitalWrite(RLED_PIN,HIGH); // turn off
@@ -418,12 +432,7 @@ void setup()
 #endif // CONTRAST_PIN
 
 
-  g_Lcd.begin(16,2);
-  g_Lcd.setCursor(0,0);
-  LcdPrint_P(PSTR("LeafCAN "));
-  g_Lcd.print(VER_STR);
-  g_Lcd.setCursor(0,1);
-  LcdPrint_P(PSTR("by Lincomatic"));
+
 //  delay(2000);
 //  g_Lcd.setCursor(0,1);
 //  LcdPrint_P(PSTR("Awaiting CAN...."));

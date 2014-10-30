@@ -2,7 +2,7 @@
 /*
  * LeafCAN Firmware
  *
- * Copyright (c) 2012-2013 Sam C. Lin <lincomatic@gmail.com>
+ * Copyright (c) 2012-2014 Sam C. Lin <lincomatic@hotmail.com>
  * Maintainer: SCL
 
  * This file is part of LeafCAN
@@ -37,7 +37,9 @@ CanBusInterface::CanBusInterface()
 
 void CanBusInterface::Init()
 {
-  m_LastReadStat = 0;
+  m_LastCanReadStat = CAN_STAT_OK;
+  m_LastCanWriteStat = CAN_STAT_OK;
+
   // Clock prescaler Reset SCL:don't need this unless CLKDIV8 is set in the low fuse
   // CLKPR = 0x80;  CLKPR = 0x00;
 
@@ -65,7 +67,7 @@ uint8_t CanBusInterface::Read()
   uint8_t canstat;
   unsigned long start = millis();
   uint8_t dumpit;
-  if (m_LastReadStat == 3) {
+  if (m_LastCanReadStat == CAN_STAT_COMPLETION_TIMEOUT) {
     dumpit = 1;
   }
   else {
@@ -73,29 +75,28 @@ uint8_t CanBusInterface::Read()
     // --- Enable Rx
     while(CAN.cmd(&m_CanMsgRx) != CAN_CMD_ACCEPTED) {
       if ((millis()-start) > CAN_TIMEOUT) {
-	m_LastReadStat = 2;
-	return 2;
+	m_LastCanReadStat = CAN_STAT_ACCEPT_TIMEOUT;
+	return m_LastCanReadStat;
       }
     }
   }
 
   // --- Wait for Rx completed
   while((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED) {
-    if ((m_LastReadStat == 3) || ((millis()-start) > CAN_TIMEOUT)) { // don't loop here if already timed out so we don't block encoder
-      m_LastReadStat = 3;
-      return 3;
+    if ((m_LastCanReadStat == 3) || ((millis()-start) > CAN_TIMEOUT)) { // don't loop here if already timed out so we don't block encoder
+      m_LastCanReadStat = CAN_STAT_COMPLETION_TIMEOUT;
+      return m_LastCanReadStat;
     }
   }
 
   if (dumpit || (canstat == CAN_STATUS_ERROR)) {
-    m_LastReadStat = 1;
-    return 1;
+    m_LastCanReadStat = CAN_STAT_ERROR;
   }
   else {
-    m_LastReadStat = 0;
+    m_LastCanReadStat = CAN_STAT_OK;
     m_LastCanMsgRxMs = millis();
-    return 0;
   }
+  return m_LastCanReadStat;
 }
 
 
@@ -106,23 +107,27 @@ uint8_t CanBusInterface::Write()
 
   while (CAN.cmd(&m_CanMsgTx) != CAN_CMD_ACCEPTED) {
     if ((millis()-start) > CAN_TIMEOUT) {
-      return 2;
+      m_LastCanWriteStat = CAN_STAT_ACCEPT_TIMEOUT;
+      return m_LastCanWriteStat;
     }
   }
 
   // --- Wait for Tx completed
   while ((canstat=CAN.get_status(&m_CanMsgRx)) == CAN_STATUS_NOT_COMPLETED) {
     if ((millis()-start) > CAN_TIMEOUT) {
-      return 3;
+      m_LastCanWriteStat = CAN_STAT_COMPLETION_TIMEOUT;      
+      return m_LastCanWriteStat;
     }
   }
 
   if (canstat == CAN_STATUS_ERROR) {
-    return 1;
+    m_LastCanWriteStat = CAN_STAT_ERROR;
   }
   else {
+    m_LastCanWriteStat = CAN_STAT_OK;
     m_LastCanMsgTxMs = millis();
-    return 0;
   }
+
+  return m_LastCanWriteStat;
 }
 

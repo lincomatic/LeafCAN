@@ -2,7 +2,7 @@
 /*
  * LeafCAN Firmware
  *
- * Copyright (c) 2012-2013 Sam C. Lin <lincomatic@gmail.com>
+ * Copyright (c) 2012-2014 Sam C. Lin <lincomatic@hotmail.com>
  * Maintainer: SCL
 
  * This file is part of LeafCAN
@@ -26,23 +26,38 @@
 #define _CANBUSINTERFACE_H_
 #include <can_lib.h>
 
-class CanBusInterface {
-public:
-  unsigned long m_LastCanMsgRxMs;
-  unsigned long m_LastCanMsgTxMs;
+// for m_LastReadStat/m_LastWriteStat
+#define CAN_STAT_OK 0
+#define CAN_STAT_ERROR 1
+#define CAN_STAT_ACCEPT_TIMEOUT 2
+#define CAN_STAT_COMPLETION_TIMEOUT 3
 
-  uint8_t m_LastReadStat;
-  st_cmd_t m_CanMsgRx;
-  st_cmd_t m_CanMsgTx;
-  uint8_t m_CanDataRx[8];
-  uint8_t m_CanDataTx[8];
+class CanBusInterface {
+  st_cmd_t m_CanMsgRx; // rx message
+  st_cmd_t m_CanMsgTx; // tx message
+  uint8_t m_CanDataRx[8]; // rx data buffer
+  uint8_t m_CanDataTx[8]; // tx data buffer
+
+  uint8_t m_LastCanReadStat; // CAN_STAT_XX
+  uint8_t m_LastCanWriteStat; // CAN_STAT_XX
+public:
+  unsigned long m_LastCanMsgRxMs; // millis() when the last Rx msg was received
+  unsigned long m_LastCanMsgTxMs; // millis() when the last Rx msg was sent
+
 
   CanBusInterface();
+
   void Init();
+
   uint8_t Read();
   uint8_t Write();
+
   st_cmd_t *GetMsgRx() { return &m_CanMsgRx; }
   st_cmd_t *GetMsgTx() { return &m_CanMsgTx; }
+
+  uint8_t GetLastReadStat() { return m_LastCanReadStat; }
+  uint8_t GetLastWriteStat() { return m_LastCanWriteStat; }
+
   uint8_t IsActive() { return (((millis()-m_LastCanMsgRxMs) <= CAN_TIMEOUT) ? 1 : 0); }
 };
 
